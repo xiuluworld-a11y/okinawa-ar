@@ -119,26 +119,38 @@
         // ==========================================
         // 【文字を描画する専用の共通関数】
         // ==========================================
+                // 【新しく追加：画像をメモリに読み込む（VBAのLoadPictureのようなもの）】
+        const arImage = new Image();
+        arImage.src = 'shiisa.png'; // GitHubにアップしたPNGファイル名とぴったり合わせる
+
+        // 文字を描画していた関数を「画像描画」に改造
         function drawAR(x, y) {
             ctx.save();
             
-            // 緑の照準マークを描く
+            // 緑の照準マークを描く（これは残しておくとロックオン感がでます）
             ctx.strokeStyle = "#00FF00";
             ctx.lineWidth = 3;
             ctx.beginPath();
             ctx.arc(x, y, 20, 0, Math.PI * 2);
             ctx.stroke();
 
-            // 真っ赤な立体文字を描く
-            ctx.fillStyle = "#FF0000";
-            ctx.font = "bold 45px sans-serif";
-            ctx.shadowColor = "black";
-            ctx.shadowBlur = 8;
-            ctx.textAlign = "center";
-            ctx.fillText("OKINAWA WORLD!", x, y - 40);
+            // 【画像の描画処理】
+            // 画像のサイズを指定（例：横200ピクセル、縦200ピクセル）
+            const imgWidth = 200;
+            const imgHeight = 200;
+
+            // マーカーの中心（x, y）に合わせて、画像がど真ん中に来るように引き算して描画
+            ctx.drawImage(
+                arImage, 
+                x - (imgWidth / 2), 
+                y - (imgHeight / 2) - 40, // マーカーの少し上に表示
+                imgWidth, 
+                imgHeight
+            );
             
             ctx.restore();
         }
+
     </script>
 </body>
 </html>
