@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>完全自作：フラグ管理ARエンジン</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: #000; }
+        #webcam, #ar-canvas { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; object-fit: cover; }
+        #ar-canvas { z-index: 10; pointer-events: none; }
+    </style>
+</head>
+<body>
+
+    <video id="webcam" autoplay playsinline muted></video>
+    <canvas id="ar-canvas"></canvas>
+
+    <script>
+        const video = document.getElementById('webcam');
+        const canvas = document.getElementById('ar-canvas');
+        const ctx = canvas.getContext('2d');
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // 1. カメラの起動
+        navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false })
+        .then((stream) => {
+            video.srcObject = stream;
+            video.addEventListener('loadedmetadata', () => {
+                requestAnimationFrame(analyzeFrame);
+            });
+        })
+        .catch((err) => { alert("カメラ起動エラー: " + err.name); });
+
+
+        // ==========================================
+        // 【新しく追加したグローバル変数】
+        // ==========================================
+        let isFound = false; // 四角を見つけたかどうかのフラグ
+        let savedX = 0;      // 見つけた四角の中心X座標
+        let savedY = 0;      // 見つけた四角の中心Y座標
+
+
+        // 2. 画像解析ループ（心臓部）
+        function analyzeFrame() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // 【大正解の処理】：すでに発見しているなら、重い計算をスキップして記憶した場所に描き続ける
+            if (isFound) {
+                drawAR(savedX, savedY);
+                requestAnimationFrame(analyzeFrame);
+                return; 
+            }
+
+            // まだ見つかっていない時だけ動くスキャン処理
+            const hiddenCanvas = document.createElement('canvas');
+            hiddenCanvas.width = 160;
+            hiddenCanvas.height = 120;
+            const hCtx = hiddenCanvas.getContext('2d');
+            hCtx.drawImage(video, 0, 0, hiddenCanvas.width, hiddenCanvas.height);
+            
+            try {
+                const imgData = hCtx.getImageData(0, 0, hiddenCanvas.width, hiddenCanvas.height);
+                const pixels = imgData.data;
+
+                let corners = [];
+                let threshold = 40;
+
+                for (let y = 4; y < hiddenCanvas.height - 4; y += 3) {
+                    for (let x = 4; x < hiddenCanvas.width - 4; x += 3) {
+                        const idx = (y * hiddenCanvas.width + x) * 4;
+                        const current = (pixels[idx] + pixels[idx+1] + pixels[idx+2]) / 3;
+
+                        const idxRight = (y * hiddenCanvas.width + (x + 2)) * 4;
+                        const idxBottom = ((y + 2) * hiddenCanvas.width + x) * 4;
+                        const diffX = Math.abs(current - (pixels[idxRight] + pixels[idxRight+1] + pixels[idxRight+2]) / 3);
+                        const diffY = Math.abs(current - (pixels[idxBottom] + pixels[idxBottom+1] + pixels[idxBottom+2]) / 3);
+
+                        if (diffX > threshold && diffY > threshold) {
+                            let isNew = true;
+                            for (let c of corners) {
+                                if (Math.abs(c.x - x) < 15 && Math.abs(c.y - y) < 15) {
+                                    isNew = false;
+                                    break;
+                                }
+                            }
+                            if (isNew) {
+                                corners.push({ x: x, y: y });
+                            }
+                        }
+                    }
+                }
+
+                // 角がぴったり4つ見つかった運命の瞬間！
+                if (corners.length === 4) {
+                    let totalX = 0, totalY = 0;
+                    for (let c of corners) {
+                        totalX += c.x;
+                        totalY += c.y;
+                    }
+
+                    // 座標を記憶して、発見フラグをオンにする
+                    savedX = (totalX / 4) * (canvas.width / hiddenCanvas.width);
+                    savedY = (totalY / 4) * (canvas.height / hiddenCanvas.height);
+                    isFound = true; 
+                }
+            } catch (e) {
+                // エラー回避
+            }
+
+            requestAnimationFrame(analyzeFrame);
+        }
+
+
+        // ==========================================
+        // 【文字を描画する専用の共通関数】
+        // ==========================================
+        function drawAR(x, y) {
+            ctx.save();
+            
+            // 緑の照準マークを描く
+            ctx.strokeStyle = "#00FF00";
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(x, y, 20, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // 真っ赤な立体文字を描く
+            ctx.fillStyle = "#FF0000";
+            ctx.font = "bold 45px sans-serif";
+            ctx.shadowColor = "black";
+            ctx.shadowBlur = 8;
+            ctx.textAlign = "center";
+            ctx.fillText("OKINAWA WORLD!", x, y - 40);
+            
+            ctx.restore();
+        }
+    </script>
+</body>
+</html>
