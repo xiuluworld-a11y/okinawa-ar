@@ -101,7 +101,7 @@
                 }
 
                                 // 【改造ポイント】：角の数が3つ、4つ、5つのいずれかであれば作動するルールに変更
-                if (corners.length === 3 || corners.length === 4 || corners.length === 5) {
+                if (corners.length === 3 || corners.length === 6 || corners.length === 5) {
                     let totalX = 0, totalY = 0;
                     for (let c of corners) { totalX += c.x; totalY += c.y; }
 
@@ -109,20 +109,22 @@
                     savedY = (totalY / corners.length) * (canvas.height / hiddenCanvas.height);
 
                     // ★ここで switch文 を使って、角の数に応じて画像を切り替える！
+                                        // 角の数（3, 4, または 8個以上）に応じて画像を切り替える！
                     switch (corners.length) {
                         case 3:
-                            arImage.src = 'うなぎだーまんゆー.png';        // 三角形ならハブの画像
+                            arImage.src = 'うなぎだーまんゆー_compressed.png';        // 三角形ならハブ
                             break;
                         case 4:
-                            arImage.src = 'ごーやーフォトスポ.png';      // 四角形ならシーサーの画像
+                            arImage.src = 'ごーやーフォトスポ.png';      // 四角形ならシーサー
                             break;
-                        case 5:
-                            arImage.src = '初恋広場.png';  // 五角形なら玉泉洞の画像
-                            break;
+                        default:
+                            if (corners.length >= 8) {       // カドが8個以上（星型や✖）なら玉泉洞！
+                                arImage.src = '初恋広場.png';
+                                break;
+                            }
+                            isFound = false; // 7個以下の中途半端なノイズならフラグをオンにせずスルーする
+                            return;
                     }
-
-                    isFound = true; // フラグをオンにして、見つけた画像を画面に固定する
-                }
 
             } catch (e) {
                 // エラー回避
