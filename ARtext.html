@@ -63,8 +63,8 @@
 
             // まだ見つかっていない時だけ動くスキャン処理
             const hiddenCanvas = document.createElement('canvas');
-            hiddenCanvas.width = 160;
-            hiddenCanvas.height = 120;
+            hiddenCanvas.width = 320;
+            hiddenCanvas.height = 240;
             const hCtx = hiddenCanvas.getContext('2d');
             hCtx.drawImage(video, 0, 0, hiddenCanvas.width, hiddenCanvas.height);
             
