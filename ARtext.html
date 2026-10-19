@@ -100,19 +100,30 @@
                     }
                 }
 
-                // 角がぴったり4つ見つかった運命の瞬間！
-                if (corners.length === 4) {
+                                // 【改造ポイント】：角の数が3つ、4つ、5つのいずれかであれば作動するルールに変更
+                if (corners.length === 3 || corners.length === 4 || corners.length === 5) {
                     let totalX = 0, totalY = 0;
-                    for (let c of corners) {
-                        totalX += c.x;
-                        totalY += c.y;
+                    for (let c of corners) { totalX += c.x; totalY += c.y; }
+
+                    savedX = (totalX / corners.length) * (canvas.width / hiddenCanvas.width);
+                    savedY = (totalY / corners.length) * (canvas.height / hiddenCanvas.height);
+
+                    // ★ここで switch文 を使って、角の数に応じて画像を切り替える！
+                    switch (corners.length) {
+                        case 3:
+                            arImage.src = 'habu.png';        // 三角形ならハブの画像
+                            break;
+                        case 4:
+                            arImage.src = 'shiisa.png';      // 四角形ならシーサーの画像
+                            break;
+                        case 5:
+                            arImage.src = 'gyokusendo.png';  // 五角形なら玉泉洞の画像
+                            break;
                     }
 
-                    // 座標を記憶して、発見フラグをオンにする
-                    savedX = (totalX / 4) * (canvas.width / hiddenCanvas.width);
-                    savedY = (totalY / 4) * (canvas.height / hiddenCanvas.height);
-                    isFound = true; 
+                    isFound = true; // フラグをオンにして、見つけた画像を画面に固定する
                 }
+
             } catch (e) {
                 // エラー回避
             }
