@@ -43,11 +43,11 @@ requestAnimationFrame(analyzeFrame);
 let isFound = false; // 四角を見つけたかどうかのフラグ
 let savedX = 0;      // 見つけた四角の中心X座標
 let savedY = 0;      // 見つけた四角の中心Y座標
-// 【新しく追加：画像の大きさ・位置を記憶する変数】
-let imgScale = 1.0;     // 画像の拡大率（1.0が100%）
-let offsetX = 0;        // 指で移動させた横の距離
-let offsetY = 0;        // 指で移動させた縦の距離
-let touchStartDist = 0; // 2本指の最初の距離
+        // 【新しく追加：画像の大きさ・位置を記憶する変数】
+        let imgScale = 1.0;     // 画像の拡大率（1.0が100%）
+        let offsetX = 0;        // 指で移動させた横の距離
+        let offsetY = 0;        // 指で移動させた縦の距離
+        let touchStartDist = 0; // 2本指の最初の距離
 
 
 // 2. 画像解析ループ（心臓部）
@@ -100,33 +100,19 @@ corners.push({ x: x, y: y });
 }
 }
 
-// 【改造ポイント】：角の数が3つ、4つ、5つのいずれかであれば作動するルールに変更
-if (corners.length === 3 || corners.length === 4 || corners.length === 5) {
+// 角がぴったり4つ見つかった運命の瞬間！
+if (corners.length === 4) {
 let totalX = 0, totalY = 0;
-for (let c of corners) { totalX += c.x; totalY += c.y; }
-
-savedX = (totalX / corners.length) * (canvas.width / hiddenCanvas.width);
-savedY = (totalY / corners.length) * (canvas.height / hiddenCanvas.height);
-
-// ★ここで switch文 を使って、角の数に応じて画像を切り替える！
-switch (corners.length) {
-case 3:
-                            arImage.src = 'うなぎだーまんゆー_compressed.png';        // 三角形ならハブの画像
-                            arImage.src = 'うなぎだーまんゆー_compressed.png';        // 三角形ならハブの画像
-break;
-case 4:
-                            arImage.src = 'ごーやーフォトスポ.png';      // 四角形ならシーサーの画像
-                            arImage.src = 'ごーやーフォトスポ.png';      // 四角形ならシーサーの画像
-break;
-case 5:
-                            arImage.src = '初恋広場.png';  // 五角形なら玉泉洞の画像
-                            arImage.src = '初恋広場.png';  // 五角形なら玉泉洞の画像
-break;
+for (let c of corners) {
+totalX += c.x;
+totalY += c.y;
 }
 
-isFound = true; // フラグをオンにして、見つけた画像を画面に固定する
+// 座標を記憶して、発見フラグをオンにする
+savedX = (totalX / 4) * (canvas.width / hiddenCanvas.width);
+savedY = (totalY / 4) * (canvas.height / hiddenCanvas.height);
+isFound = true; 
 }
-
 } catch (e) {
 // エラー回避
 }
@@ -142,62 +128,83 @@ requestAnimationFrame(analyzeFrame);
 const arImage = new Image();
 arImage.src = 'ごーやーフォトスポ.png'; // GitHubにアップしたPNGファイル名とぴったり合わせる
 
-// 【画像描画の関数をタッチ連動用に改造】
+        // 文字を描画していた関数を「画像描画」に改造
+                // 【画像描画の関数をタッチ連動用に改造】
 function drawAR(x, y) {
 ctx.save();
 
-// 指で移動させた分（offsetX, offsetY）と、ARで見つけた位置（x, y）を合体させる
-const currentX = x + offsetX;
-const currentY = y - 40 + offsetY;
+            // 緑の照準マークを描く（これは残しておくとロックオン感がでます）
+            ctx.strokeStyle = "#00FF00";
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(x, y, 20, 0, Math.PI * 2);
+            ctx.stroke();
 
-// 基本サイズ（200）に、指で拡大縮小した倍率（imgScale）を掛け算する
-const imgWidth = 200 * imgScale;
-const imgHeight = 200 * imgScale;
+            // 【画像の描画処理】
+            // 画像のサイズを指定（例：横200ピクセル、縦200ピクセル）
+            const imgWidth = 200;
+            const imgHeight = 200;
 
-// 計算した新しい位置と大きさで画像を貼り付ける
-ctx.drawImage(arImage, currentX - (imgWidth / 2), currentY - (imgHeight / 2), imgWidth, imgHeight);
+            // マーカーの中心（x, y）に合わせて、画像がど真ん中に来るように引き算して描画
+            ctx.drawImage(
+                arImage, 
+                x - (imgWidth / 2), 
+                y - (imgHeight / 2) - 40, // マーカーの少し上に表示
+                imgWidth, 
+                imgHeight
+            );
+            // 指で移動させた分（offsetX, offsetY）と、ARで見つけた位置（x, y）を合体させる
+            const currentX = x + offsetX;
+            const currentY = y - 40 + offsetY;
+
+            // 基本サイズ（200）に、指で拡大縮小した倍率（imgScale）を掛け算する
+            const imgWidth = 200 * imgScale;
+            const imgHeight = 200 * imgScale;
+
+            // 計算した新しい位置と大きさで画像を貼り付ける
+            ctx.drawImage(arImage, currentX - (imgWidth / 2), currentY - (imgHeight / 2), imgWidth, imgHeight);
 
 ctx.restore();
 }
 
-// ==========================================
-// 【スマホのタッチ操作を感知するプログラム（約30行）】
-// ==========================================
-let startX = 0, startY = 0;
+        // ==========================================
+        // 【スマホのタッチ操作を感知するプログラム（約30行）】
+        // ==========================================
+        let startX = 0, startY = 0;
 
-// 画面に指が触れた瞬間
-window.addEventListener('touchstart', (e) => {
-if (e.touches.length === 1) { // 1本指（移動の準備）
-startX = e.touches[0].clientX;
-startY = e.touches[0].clientY;
-} else if (e.touches.length === 2) { // 2本指（拡大の準備）
-// 2つの指の間の距離を計算して記憶
-touchStartDist = Math.hypot(
-e.touches[0].clientX - e.touches[1].clientX,
-e.touches[0].clientY - e.touches[1].clientY
-);
-}
-});
+        // 画面に指が触れた瞬間
+        window.addEventListener('touchstart', (e) => {
+            if (e.touches.length === 1) { // 1本指（移動の準備）
+                startX = e.touches[0].clientX;
+                startY = e.touches[0].clientY;
+            } else if (e.touches.length === 2) { // 2本指（拡大の準備）
+                // 2つの指の間の距離を計算して記憶
+                touchStartDist = Math.hypot(
+                    e.touches[0].clientX - e.touches[1].clientX,
+                    e.touches[0].clientY - e.touches[1].clientY
+                );
+            }
+        });
 
-// 指が画面の上を動いている最中（VBAのMouseMoveのようなもの）
-window.addEventListener('touchmove', (e) => {
-if (e.touches.length === 1) { // 1本指でスワイプ移動
-const moveX = e.touches[0].clientX - startX;
-const moveY = e.touches[0].clientY - startY;
-offsetX += moveX;
-offsetY += moveY;
-startX = e.touches[0].clientX;
-startY = e.touches[0].clientY;
-} else if (e.touches.length === 2) { // 2本指でピンチ拡大縮小
-const dist = Math.hypot(
-e.touches[0].clientX - e.touches[1].clientX,
-e.touches[0].clientY - e.touches[1].clientY
-);
-// 最初の指の距離との比率を計算して拡大率を変える
-imgScale *= (dist / touchStartDist);
-touchStartDist = dist;
-}
-});
+        // 指が画面の上を動いている最中（VBAのMouseMoveのようなもの）
+        window.addEventListener('touchmove', (e) => {
+            if (e.touches.length === 1) { // 1本指でスワイプ移動
+                const moveX = e.touches[0].clientX - startX;
+                const moveY = e.touches[0].clientY - startY;
+                offsetX += moveX;
+                offsetY += moveY;
+                startX = e.touches[0].clientX;
+                startY = e.touches[0].clientY;
+            } else if (e.touches.length === 2) { // 2本指でピンチ拡大縮小
+                const dist = Math.hypot(
+                    e.touches[0].clientX - e.touches[1].clientX,
+                    e.touches[0].clientY - e.touches[1].clientY
+                );
+                // 最初の指の距離との比率を計算して拡大率を変える
+                imgScale *= (dist / touchStartDist);
+                touchStartDist = dist;
+            }
+        });
 
 
 </script>
