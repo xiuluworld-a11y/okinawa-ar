@@ -1,201 +1,204 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <meta charset="utf-8">
-    <title>完全自作：マルチAR探究エンジン</title>
-    <style>
-        body { margin: 0; overflow: hidden; background: #000; font-family: sans-serif; }
-        #webcam, #ar-canvas { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; object-fit: cover; }
-        #ar-canvas { z-index: 10; pointer-events: none; }
-    </style>
+<meta charset="utf-8">
+<title>完全自作：フラグ管理ARエンジン</title>
+<style>
+body { margin: 0; overflow: hidden; background: #000; }
+#webcam, #ar-canvas { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; object-fit: cover; }
+#ar-canvas { z-index: 10; pointer-events: none; }
+</style>
 </head>
 <body>
 
-    <video id="webcam" autoplay playsinline muted></video>
-    <canvas id="ar-canvas"></canvas>
+<video id="webcam" autoplay playsinline muted></video>
+<canvas id="ar-canvas"></canvas>
 
-    <script>
-        const video = document.getElementById('webcam');
-        const canvas = document.getElementById('ar-canvas');
-        const ctx = canvas.getContext('2d');
+<script>
+const video = document.getElementById('webcam');
+const canvas = document.getElementById('ar-canvas');
+const ctx = canvas.getContext('2d');
 
-        function resizeCanvas() {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-        }
-        window.addEventListener('resize', resizeCanvas);
-        resizeCanvas();
+function resizeCanvas() {
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
 
-        // 1. カメラの起動
-        navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false })
-        .then((stream) => {
-            video.srcObject = stream;
-            video.addEventListener('loadedmetadata', () => {
-                requestAnimationFrame(analyzeFrame);
-            });
-        })
-        .catch((err) => { alert("カメラ起動エラー: " + err.name); });
+// 1. カメラの起動
+navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false })
+.then((stream) => {
+video.srcObject = stream;
+video.addEventListener('loadedmetadata', () => {
+requestAnimationFrame(analyzeFrame);
+});
+})
+.catch((err) => { alert("カメラ起動エラー: " + err.name); });
 
-        // ==========================================
-        // グローバル変数
-        // ==========================================
-        let isFound = false;    // 画像を画面に固定するフラグ
-        let savedX = 0;         // 固定する中心X座標
-        let savedY = 0;         // 固定する中心Y座標
-        let imgScale = 1.0;     // 指で拡大縮小した倍率
-        let offsetX = 0;        // 指で移動させた横の距離
-        let offsetY = 0;        // 指で移動させた縦の距離
-        let touchStartDist = 0; // 2本指の最初の距離
 
-        // 画像オブジェクトの作成
-        const arImage = new Image();
+// ==========================================
+// 【新しく追加したグローバル変数】
+// ==========================================
+let isFound = false; // 四角を見つけたかどうかのフラグ
+let savedX = 0;      // 見つけた四角の中心X座標
+let savedY = 0;      // 見つけた四角の中心Y座標
+// 【新しく追加：画像の大きさ・位置を記憶する変数】
+let imgScale = 1.0;     // 画像の拡大率（1.0が100%）
+let offsetX = 0;        // 指で移動させた横の距離
+let offsetY = 0;        // 指で移動させた縦の距離
+let touchStartDist = 0; // 2本指の最初の距離
 
-        // 2. 画像解析ループ（心臓部）
-        function analyzeFrame() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // すでに発見しているなら、重い計算をスキップして画像を出し続ける
-            if (isFound) {
-                drawAR(savedX, savedY);
-                requestAnimationFrame(analyzeFrame);
-                return; 
-            }
+// 2. 画像解析ループ（心臓部）
+function analyzeFrame() {
+ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // 誤作動が起きにくい最低解像度「320 × 240」に固定
-            const hiddenCanvas = document.createElement('canvas');
+// 【大正解の処理】：すでに発見しているなら、重い計算をスキップして記憶した場所に描き続ける
+if (isFound) {
+drawAR(savedX, savedY);
+requestAnimationFrame(analyzeFrame);
+return; 
+}
+
+// まだ見つかっていない時だけ動くスキャン処理
+const hiddenCanvas = document.createElement('canvas');
             hiddenCanvas.width = 160;
             hiddenCanvas.height = 120;
-            const hCtx = hiddenCanvas.getContext('2d');
-            hCtx.drawImage(video, 0, 0, hiddenCanvas.width, hiddenCanvas.height);
-            
-            try {
-                const imgData = hCtx.getImageData(0, 0, hiddenCanvas.width, hiddenCanvas.height);
-                const pixels = imgData.data;
+            hiddenCanvas.width = 320;
+            hiddenCanvas.height = 240;
+const hCtx = hiddenCanvas.getContext('2d');
+hCtx.drawImage(video, 0, 0, hiddenCanvas.width, hiddenCanvas.height);
 
-                let corners = [];
-                let threshold = 40;
+try {
+const imgData = hCtx.getImageData(0, 0, hiddenCanvas.width, hiddenCanvas.height);
+const pixels = imgData.data;
 
-                for (let y = 4; y < hiddenCanvas.height - 4; y += 3) {
-                    for (let x = 4; x < hiddenCanvas.width - 4; x += 3) {
-                        const idx = (y * hiddenCanvas.width + x) * 4;
-                        const current = (pixels[idx] + pixels[idx+1] + pixels[idx+2]) / 3;
+let corners = [];
+let threshold = 40;
 
-                        const idxRight = (y * hiddenCanvas.width + (x + 2)) * 4;
-                        const idxBottom = ((y + 2) * hiddenCanvas.width + x) * 4;
-                        const diffX = Math.abs(current - (pixels[idxRight] + pixels[idxRight+1] + pixels[idxRight+2]) / 3);
-                        const diffY = Math.abs(current - (pixels[idxBottom] + pixels[idxBottom+1] + pixels[idxBottom+2]) / 3);
+for (let y = 4; y < hiddenCanvas.height - 4; y += 3) {
+for (let x = 4; x < hiddenCanvas.width - 4; x += 3) {
+const idx = (y * hiddenCanvas.width + x) * 4;
+const current = (pixels[idx] + pixels[idx+1] + pixels[idx+2]) / 3;
 
-                        if (diffX > threshold && diffY > threshold) {
-                            let isNew = true;
-                            for (let c of corners) {
-                                if (Math.abs(c.x - x) < 20 && Math.abs(c.y - y) < 20) {
-                                    isNew = false;
-                                    break;
-                                }
-                            }
-                            if (isNew) {
-                                corners.push({ x: x, y: y });
-                            }
-                        }
-                    }
-                }
+const idxRight = (y * hiddenCanvas.width + (x + 2)) * 4;
+const idxBottom = ((y + 2) * hiddenCanvas.width + x) * 4;
+const diffX = Math.abs(current - (pixels[idxRight] + pixels[idxRight+1] + pixels[idxRight+2]) / 3);
+const diffY = Math.abs(current - (pixels[idxBottom] + pixels[idxBottom+1] + pixels[idxBottom+2]) / 3);
 
-                // デバッグ用：カメラが捉えているすべての「角」に水色の点を描く
-                for (let c of corners) {
-                    const cx = c.x * (canvas.width / hiddenCanvas.width);
-                    const cy = c.y * (canvas.height / hiddenCanvas.height);
-                    ctx.beginPath(); ctx.arc(cx, cy, 4, 0, Math.PI * 2); ctx.fillStyle = "#00FFFF"; ctx.fill();
-                }
+if (diffX > threshold && diffY > threshold) {
+let isNew = true;
+for (let c of corners) {
+if (Math.abs(c.x - x) < 15 && Math.abs(c.y - y) < 15) {
+isNew = false;
+break;
+}
+}
+if (isNew) {
+corners.push({ x: x, y: y });
+}
+}
+}
+}
 
-                // ==========================================
-                // 【3・5・8以上】限定の条件分岐（switch文）
-                // ==========================================
-                switch (corners.length) {
-                    case 3:
-                        arImage.src = 'うなぎだーまんゆー.png'; // 三角形（▲）
-                        lockOn(corners);
-                        break;
-                        
-                    case 5:
-                        arImage.src = '初恋広場.png'; // 五角形（⬠）
-                        lockOn(corners);
-                        break;
-                        
-                    default:
-                        // 8個以上の星型（★）や✖マークの場合
-                        if (corners.length >= 8) {
-                            arImage.src = 'ごーやーフォトスポ.png'; // 星型・✖（8個以上）
-                            lockOn(corners);
-                        }
-                        break;
-                }
+// 【改造ポイント】：角の数が3つ、4つ、5つのいずれかであれば作動するルールに変更
+if (corners.length === 3 || corners.length === 4 || corners.length === 5) {
+let totalX = 0, totalY = 0;
+for (let c of corners) { totalX += c.x; totalY += c.y; }
 
-            } catch (e) {
-                // エラー回避
-            }
+savedX = (totalX / corners.length) * (canvas.width / hiddenCanvas.width);
+savedY = (totalY / corners.length) * (canvas.height / hiddenCanvas.height);
 
-            requestAnimationFrame(analyzeFrame);
-        }
+// ★ここで switch文 を使って、角の数に応じて画像を切り替える！
+switch (corners.length) {
+case 3:
+arImage.src = 'うなぎだーまんゆー.png';        // 三角形ならハブの画像
+break;
+case 4:
+arImage.src = 'ごーやーフォトスポ.png';      // 四角形ならシーサーの画像
+break;
+case 5:
+arImage.src = '初恋広場.png';  // 五角形なら玉泉洞の画像
+break;
+}
 
-        // ロックオンして座標を記憶する共通処理
-        function lockOn(corners) {
-            let totalX = 0, totalY = 0;
-            for (let c of corners) { totalX += c.x; totalY += c.y; }
-            savedX = (totalX / corners.length) * (canvas.width / hiddenCanvas.width);
-            savedY = (totalY / corners.length) * (canvas.height / hiddenCanvas.height);
-            isFound = true; // 画面に固定！
-        }
+isFound = true; // フラグをオンにして、見つけた画像を画面に固定する
+}
 
-        // 画像を描画する関数（指の移動・拡大に対応）
-        function drawAR(x, y) {
-            if (!arImage.complete) return; // 画像の読み込みが完了するまで待つ
-            ctx.save();
-            
-            const currentX = x + offsetX;
-            const currentY = y - 40 + offsetY;
-            const imgWidth = 200 * imgScale;
-            const imgHeight = 200 * imgScale;
+} catch (e) {
+// エラー回避
+}
 
-            ctx.drawImage(arImage, currentX - (imgWidth / 2), currentY - (imgHeight / 2), imgWidth, imgHeight);
-            ctx.restore();
-        }
+requestAnimationFrame(analyzeFrame);
+}
 
-        // ==========================================
-        // スマホのタッチ操作プログラム
-        // ==========================================
-        let startX = 0, startY = 0;
 
-        window.addEventListener('touchstart', (e) => {
-            if (e.touches.length === 1) {
-                startX = e.touches.clientX;
-                startY = e.touches.clientY;
-            } else if (e.touches.length === 2) {
-                touchStartDist = Math.hypot(
-                    e.touches.clientX - e.touches.clientX,
-                    e.touches.clientY - e.touches.clientY
-                );
-            }
-        });
+// ==========================================
+// 【文字を描画する専用の共通関数】
+// ==========================================
+// 【新しく追加：画像をメモリに読み込む（VBAのLoadPictureのようなもの）】
+const arImage = new Image();
+arImage.src = 'ごーやーフォトスポ.png'; // GitHubにアップしたPNGファイル名とぴったり合わせる
 
-        window.addEventListener('touchmove', (e) => {
-            if (e.touches.length === 1) {
-                const moveX = e.touches.clientX - startX;
-                const moveY = e.touches.clientY - startY;
-                offsetX += moveX;
-                offsetY += moveY;
-                startX = e.touches.clientX;
-                startY = e.touches.clientY;
-            } else if (e.touches.length === 2) {
-                const dist = Math.hypot(
-                    e.touches.clientX - e.touches.clientX,
-                    e.touches.clientY - e.touches.clientY
-                );
-                if (touchStartDist > 0) {
-                    imgScale *= (dist / touchStartDist);
-                }
-                touchStartDist = dist;
-            }
-        });
-    </script>
+// 【画像描画の関数をタッチ連動用に改造】
+function drawAR(x, y) {
+ctx.save();
+
+// 指で移動させた分（offsetX, offsetY）と、ARで見つけた位置（x, y）を合体させる
+const currentX = x + offsetX;
+const currentY = y - 40 + offsetY;
+
+// 基本サイズ（200）に、指で拡大縮小した倍率（imgScale）を掛け算する
+const imgWidth = 200 * imgScale;
+const imgHeight = 200 * imgScale;
+
+// 計算した新しい位置と大きさで画像を貼り付ける
+ctx.drawImage(arImage, currentX - (imgWidth / 2), currentY - (imgHeight / 2), imgWidth, imgHeight);
+
+ctx.restore();
+}
+
+// ==========================================
+// 【スマホのタッチ操作を感知するプログラム（約30行）】
+// ==========================================
+let startX = 0, startY = 0;
+
+// 画面に指が触れた瞬間
+window.addEventListener('touchstart', (e) => {
+if (e.touches.length === 1) { // 1本指（移動の準備）
+startX = e.touches[0].clientX;
+startY = e.touches[0].clientY;
+} else if (e.touches.length === 2) { // 2本指（拡大の準備）
+// 2つの指の間の距離を計算して記憶
+touchStartDist = Math.hypot(
+e.touches[0].clientX - e.touches[1].clientX,
+e.touches[0].clientY - e.touches[1].clientY
+);
+}
+});
+
+// 指が画面の上を動いている最中（VBAのMouseMoveのようなもの）
+window.addEventListener('touchmove', (e) => {
+if (e.touches.length === 1) { // 1本指でスワイプ移動
+const moveX = e.touches[0].clientX - startX;
+const moveY = e.touches[0].clientY - startY;
+offsetX += moveX;
+offsetY += moveY;
+startX = e.touches[0].clientX;
+startY = e.touches[0].clientY;
+} else if (e.touches.length === 2) { // 2本指でピンチ拡大縮小
+const dist = Math.hypot(
+e.touches[0].clientX - e.touches[1].clientX,
+e.touches[0].clientY - e.touches[1].clientY
+);
+// 最初の指の距離との比率を計算して拡大率を変える
+imgScale *= (dist / touchStartDist);
+touchStartDist = dist;
+}
+});
+
+
+</script>
 </body>
 </html>
