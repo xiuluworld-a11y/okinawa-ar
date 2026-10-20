@@ -63,8 +63,8 @@
 
             // 誤作動が起きにくい最低解像度「320 × 240」に固定
             const hiddenCanvas = document.createElement('canvas');
-            hiddenCanvas.width = 320;
-            hiddenCanvas.height = 240;
+            hiddenCanvas.width = 160;
+            hiddenCanvas.height = 120;
             const hCtx = hiddenCanvas.getContext('2d');
             hCtx.drawImage(video, 0, 0, hiddenCanvas.width, hiddenCanvas.height);
             
