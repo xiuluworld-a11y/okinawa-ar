@@ -2,19 +2,19 @@
 <html>
 <head>
 <meta charset="utf-8">
-<title>クエスト風：フラグ管理ARエンジン</title>
+<title>玉泉洞クエスト：ARエンジン</title>
 <style>
 body { margin: 0; overflow: hidden; background: #000; font-family: sans-serif; }
 #webcam, #ar-canvas { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; object-fit: cover; }
 #ar-canvas { z-index: 10; pointer-events: none; }
 
-/* クイズ・ヒントを表示するUIエリア（画面下部にせり上がる） */
+/* クイズUIエリア */
 #quiz-ui {
     position: fixed;
-    bottom: -100vh; /* 最初は画面の下に隠しておく */
+    bottom: -100vh;
     left: 0;
     width: 100vw;
-    height: 40vh;
+    height: 42vh;
     background: rgba(0, 0, 0, 0.85);
     border-top: 3px solid #00FF00;
     border-radius: 20px 20px 0 0;
@@ -25,13 +25,13 @@ body { margin: 0; overflow: hidden; background: #000; font-family: sans-serif; }
     color: #fff;
     text-align: center;
 }
-#quiz-ui.show { bottom: 0; } /* クラスがつくと画面内に出現 */
+#quiz-ui.show { bottom: 0; }
 
-.quiz-text { font-size: 16px; font-weight: bold; margin-bottom: 15px; color: #00FF00; }
+.quiz-text { font-size: 16px; font-weight: bold; margin-bottom: 12px; color: #00FF00; }
 .hint-text { font-size: 16px; color: #FFF; font-weight: bold; line-height: 1.5; }
 
-/* 3択の選択肢ボタン */
-.options-container { display: flex; flex-direction: column; gap: 10px; }
+/* 3択ボタン */
+.options-container { display: flex; flex-direction: column; gap: 8px; }
 .option-btn {
     background: #222;
     color: #fff;
@@ -40,11 +40,9 @@ body { margin: 0; overflow: hidden; background: #000; font-family: sans-serif; }
     border-radius: 8px;
     font-size: 14px;
     cursor: pointer;
-    transition: background 0.2s;
 }
 .option-btn:active { background: #00FF00; color: #000; }
 
-/* 次へ進むボタン */
 .next-btn {
     background: #00FF00;
     color: #000;
@@ -54,7 +52,6 @@ body { margin: 0; overflow: hidden; background: #000; font-family: sans-serif; }
     font-size: 16px;
     font-weight: bold;
     margin-top: 15px;
-    cursor: pointer;
 }
 </style>
 </head>
@@ -63,7 +60,6 @@ body { margin: 0; overflow: hidden; background: #000; font-family: sans-serif; }
 <video id="webcam" autoplay playsinline muted></video>
 <canvas id="ar-canvas"></canvas>
 
-<!-- クエストUIエリア -->
 <div id="quiz-ui">
     <div id="ui-content"></div>
 </div>
@@ -83,29 +79,30 @@ window.addEventListener('resize', resizeCanvas);
 resizeCanvas();
 
 // ==========================================
-// 【クエストのデータ定義】※ネットなしでも動くようにここに全データを持たせます
+// 【クエストデータ設定】
 // ==========================================
-let currentStage = 0; // 現在のステージ（0: A地点、1: B地点 ...）
-let isShowingResult = false; // クイズに正解してヒントを表示しているかどうかのフラグ
+let currentStage = 0;
 
 const questData = [
     {
-        location: "A地点",
-        question: "【問題1】沖縄の方言で「ゴーヤー」の正式な和名は何でしょう？",
-        options: ["ヘチマ", "ツルレイシ", "トウガン"],
-        correctIndex: 1, // ツルレイシが正解
-        hint: "正解！【B地点へのヒント】<br>次に向かうべき場所は、大きなガジュマルの木の下だ。そこで再びマーカーにかざせ！"
+        location: "A地点（玉泉洞 入口）",
+        imageSrc: "cave_quest_A.png",
+        question: "【第1問】玉泉洞の鍾乳石は、何年で1センチ伸びると言われている？",
+        options: ["約3年", "約30年", "約300年"],
+        correctIndex: 1,
+        hint: "正解！国内最速のスピードです！<br>【B地点へのヒント】次は『青の泉』の看板の近くにあるマーカーを探せ！"
     },
     {
-        location: "B地点",
-        question: "【問題2】ゴーヤーのビタミンCは、レモンの約何倍含まれている？",
-        options: ["約1.5倍", "約3倍", "約10倍"],
-        correctIndex: 1, // 約3倍が正解
-        hint: "素晴らしい！クエストクリア！<br>すべての謎が解けました。受付に戻って景品を受け取ろう！"
+        location: "B地点（青の泉）",
+        imageSrc: "cave_quest_B.png",
+        question: "【第2問】鍾乳洞のなかの気温は、年間を通して約何度で一定？",
+        options: ["約15度", "約21度", "約28度"],
+        correctIndex: 1,
+        hint: "素晴らしい！全問正解です！<br>洞窟を出て、お土産ショップの受付で景品をもらおう！"
     }
 ];
 
-// カメラの起動
+// カメラ起動
 navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false })
 .then((stream) => {
     video.srcObject = stream;
@@ -113,32 +110,32 @@ navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audi
         requestAnimationFrame(analyzeFrame);
     });
 })
-.catch((err) => { alert("カメラ起動エラー: " + err.name); });
+.catch((err) => { alert("カメラエラー: " + err.name); });
 
-// グローバル変数
+// 変数
 let isFound = false;
-let savedX = 0;
-let savedY = 0;
+let savedX = 0, savedY = 0;
 let imgScale = 1.0;
-let offsetX = 0;
-let offsetY = 0;
+let offsetX = 0, offsetY = 0;
 let touchStartDist = 0;
 
-// 画像の読み込み
+// AR表示用の画像オブジェクト
 const arImage = new Image();
-arImage.src = 'ごーやーフォトスポ.png'; 
 
-// 画像解析ループ
+// 画像解析
 function analyzeFrame() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     if (isFound) {
-        drawAR(savedX, savedY);
+        // ★修正点：マーカーの検出位置（savedX, savedY）ではなく、画面の「完全な中心」を渡す
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
+        drawAR(centerX, centerY);
+        
         requestAnimationFrame(analyzeFrame);
         return; 
     }
 
-    // スキャン処理
     const hiddenCanvas = document.createElement('canvas');
     hiddenCanvas.width = 160;
     hiddenCanvas.height = 120;
@@ -173,19 +170,18 @@ function analyzeFrame() {
             }
         }
 
-        // 角が10個以上見つかったらマーカー（ロゴ）があると判定する！
-            if (corners.length >= 10) {
-
+        if (corners.length >= 10) {
+            // ロックオン時のみ位置計算（中心固定にするため、フラグONのトリガーとして使用）
             let totalX = 0, totalY = 0;
             for (let c of corners) {
                 totalX += c.x;
                 totalY += c.y;
             }
-            savedX = (totalX / 4) * (canvas.width / hiddenCanvas.width);
-            savedY = (totalY / 4) * (canvas.height / hiddenCanvas.height);
-            isFound = true; 
+            savedX = (totalX / corners.length) * (canvas.width / hiddenCanvas.width);
+            savedY = (totalY / corners.length) * (canvas.height / hiddenCanvas.height);
             
-            // マarkerを見つけたらUIを表示する
+            arImage.src = questData[currentStage].imageSrc;
+            isFound = true; 
             showQuizUI();
         }
     } catch (e) {}
@@ -193,63 +189,49 @@ function analyzeFrame() {
     requestAnimationFrame(analyzeFrame);
 }
 
-// AR画像描画（重複バグを修正）
+// AR描画
 function drawAR(x, y) {
     ctx.save();
 
-    // 照準マーク
-    ctx.strokeStyle = "#00FF00";
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.arc(x, y, 20, 0, Math.PI * 2);
-    ctx.stroke();
-
-    // 位置と大きさを計算
+    // ★修正点：画像が完全に中央にくるよう、画面上部への不自然な引き算（-40）を撤去
     const currentX = x + offsetX;
-    const currentY = y - 40 + offsetY;
-    const imgWidth = 200 * imgScale;
-    const imgHeight = 200 * imgScale;
+    const currentY = y + offsetY;
+    const imgWidth = 250 * imgScale;  // 初期サイズを少し見やすく250に拡大
+    const imgHeight = 250 * imgScale;
 
-    // 画像描画（問題画像として出現）
-    ctx.drawImage(arImage, currentX - (imgWidth / 2), currentY - (imgHeight / 2), imgWidth, imgHeight);
+    // 画像描画
+    if (arImage.complete) {
+        ctx.drawImage(arImage, currentX - (imgWidth / 2), currentY - (imgHeight / 2), imgWidth, imgHeight);
+    }
 
     ctx.restore();
 }
 
-// ==========================================
-// 【クエストUI制御の処理】
-// ==========================================
+// クイズUI表示
 function showQuizUI() {
     if (currentStage >= questData.length) return;
     
-    isShowingResult = false;
     const stage = questData[currentStage];
-    
-    // 3択ボタンを組み立てる
     let optionsHtml = '';
     stage.options.forEach((opt, index) => {
         optionsHtml += `<button class="option-btn" onclick="checkAnswer(${index})">${opt}</button>`;
     });
 
     uiContent.innerHTML = `
-        <div class="quiz-text">📍 ${stage.location} に到達！</div>
+        <div class="quiz-text">📍 ${stage.location}</div>
         <div class="quiz-text">${stage.question}</div>
         <div class="options-container">${optionsHtml}</div>
     `;
     quizUi.classList.add('show');
 }
 
-// 答え合わせの関数
+// 答え合わせ
 function checkAnswer(selectedIndex) {
     const stage = questData[currentStage];
     
     if (selectedIndex === stage.correctIndex) {
-        // 正解ならB地点へのヒントを表示
-        isShowingResult = true;
-        
-        // ラストステージかどうかでボタンの文字を変える
         const isLast = currentStage === questData.length - 1;
-        const btnText = isLast ? "クリア！" : "次のスポットを探す";
+        const btnText = isLast ? "クエストクリア！" : "次のスポットへ移動する";
         
         uiContent.innerHTML = `
             <div class="hint-text">${stage.hint}</div>
@@ -260,11 +242,11 @@ function checkAnswer(selectedIndex) {
     }
 }
 
-// 次のステージ（B地点など）へ進む処理
+// 次のステージへ進む
 function goToNextStage() {
     quizUi.classList.remove('show');
     
-    // フラグや位置移動の記憶をリセットして次のスキャンに備える
+    // リセット
     isFound = false;
     offsetX = 0;
     offsetY = 0;
@@ -273,11 +255,11 @@ function goToNextStage() {
     currentStage++;
     
     if (currentStage >= questData.length) {
-        alert("全クエスト完了です！お疲れ様でした！");
+        alert("すべてのクエストが終了しました！");
     }
 }
 
-// タッチ操作
+// タッチ操作（iOS/Android両対応に修正）
 let startX = 0, startY = 0;
 window.addEventListener('touchstart', (e) => {
     if (e.touches.length === 1) {
