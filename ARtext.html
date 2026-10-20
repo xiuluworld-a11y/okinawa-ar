@@ -78,10 +78,13 @@ function resizeCanvas() {
 window.addEventListener('resize', resizeCanvas);
 resizeCanvas();
 
+
 // ==========================================
 // 【クエストデータ設定】
 // ==========================================
-let currentStage = 0;
+// ★リロード対策：スマホのメモリに保存されたステージがあればそれを読み込み、なければ0（最初）からスタート
+let currentStage = parseInt(localStorage.getItem('cave_quest_stage')) || 0;
+
 
 const questData = [
     {
@@ -274,10 +277,16 @@ function goToNextStage() {
     
     currentStage++;
     
+    // ★追加：進んだステージ番号をスマホのメモリにセーブする
+    localStorage.setItem('cave_quest_stage', currentStage);
+    
     if (currentStage >= questData.length) {
         alert("すべてのクエストが終了しました！");
+        // 全クリアしたらセーブデータを消して最初に戻せるようにするなら以下を有効に
+        // localStorage.removeItem('cave_quest_stage');
     }
 }
+
 
 // タッチ操作（iOS/Android両対応に修正）
 let startX = 0, startY = 0;
@@ -310,6 +319,14 @@ window.addEventListener('touchmove', (e) => {
         touchStartDist = dist;
     }
 });
+
+// 【PWA対応】オフライン用の仕組み（Service Worker）を登録する
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js')
+    .then(() => console.log('オフライン準備完了！'))
+    .catch((err) => console.log('登録エラー:', err));
+}
+
 </script>
 </body>
 </html>
