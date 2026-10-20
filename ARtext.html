@@ -2,11 +2,60 @@
 <html>
 <head>
 <meta charset="utf-8">
-<title>完全自作：フラグ管理ARエンジン</title>
+<title>クエスト風：フラグ管理ARエンジン</title>
 <style>
-body { margin: 0; overflow: hidden; background: #000; }
+body { margin: 0; overflow: hidden; background: #000; font-family: sans-serif; }
 #webcam, #ar-canvas { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; object-fit: cover; }
 #ar-canvas { z-index: 10; pointer-events: none; }
+
+/* クイズ・ヒントを表示するUIエリア（画面下部にせり上がる） */
+#quiz-ui {
+    position: fixed;
+    bottom: -100vh; /* 最初は画面の下に隠しておく */
+    left: 0;
+    width: 100vw;
+    height: 40vh;
+    background: rgba(0, 0, 0, 0.85);
+    border-top: 3px solid #00FF00;
+    border-radius: 20px 20px 0 0;
+    z-index: 100;
+    transition: bottom 0.4s ease;
+    padding: 20px;
+    box-sizing: border-box;
+    color: #fff;
+    text-align: center;
+}
+#quiz-ui.show { bottom: 0; } /* クラスがつくと画面内に出現 */
+
+.quiz-text { font-size: 16px; font-weight: bold; margin-bottom: 15px; color: #00FF00; }
+.hint-text { font-size: 16px; color: #FFF; font-weight: bold; line-height: 1.5; }
+
+/* 3択の選択肢ボタン */
+.options-container { display: flex; flex-direction: column; gap: 10px; }
+.option-btn {
+    background: #222;
+    color: #fff;
+    border: 1px solid #00FF00;
+    padding: 10px;
+    border-radius: 8px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.option-btn:active { background: #00FF00; color: #000; }
+
+/* 次へ進むボタン */
+.next-btn {
+    background: #00FF00;
+    color: #000;
+    border: none;
+    padding: 12px 30px;
+    border-radius: 25px;
+    font-size: 16px;
+    font-weight: bold;
+    margin-top: 15px;
+    cursor: pointer;
+}
 </style>
 </head>
 <body>
@@ -14,199 +63,249 @@ body { margin: 0; overflow: hidden; background: #000; }
 <video id="webcam" autoplay playsinline muted></video>
 <canvas id="ar-canvas"></canvas>
 
+<!-- クエストUIエリア -->
+<div id="quiz-ui">
+    <div id="ui-content"></div>
+</div>
+
 <script>
 const video = document.getElementById('webcam');
 const canvas = document.getElementById('ar-canvas');
 const ctx = canvas.getContext('2d');
+const quizUi = document.getElementById('quiz-ui');
+const uiContent = document.getElementById('ui-content');
 
 function resizeCanvas() {
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
 }
 window.addEventListener('resize', resizeCanvas);
 resizeCanvas();
 
-// 1. カメラの起動
+// ==========================================
+// 【クエストのデータ定義】※ネットなしでも動くようにここに全データを持たせます
+// ==========================================
+let currentStage = 0; // 現在のステージ（0: A地点、1: B地点 ...）
+let isShowingResult = false; // クイズに正解してヒントを表示しているかどうかのフラグ
+
+const questData = [
+    {
+        location: "A地点",
+        question: "【問題1】沖縄の方言で「ゴーヤー」の正式な和名は何でしょう？",
+        options: ["ヘチマ", "ツルレイシ", "トウガン"],
+        correctIndex: 1, // ツルレイシが正解
+        hint: "正解！【B地点へのヒント】<br>次に向かうべき場所は、大きなガジュマルの木の下だ。そこで再びマーカーにかざせ！"
+    },
+    {
+        location: "B地点",
+        question: "【問題2】ゴーヤーのビタミンCは、レモンの約何倍含まれている？",
+        options: ["約1.5倍", "約3倍", "約10倍"],
+        correctIndex: 1, // 約3倍が正解
+        hint: "素晴らしい！クエストクリア！<br>すべての謎が解けました。受付に戻って景品を受け取ろう！"
+    }
+];
+
+// カメラの起動
 navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false })
 .then((stream) => {
-video.srcObject = stream;
-video.addEventListener('loadedmetadata', () => {
-requestAnimationFrame(analyzeFrame);
-});
+    video.srcObject = stream;
+    video.addEventListener('loadedmetadata', () => {
+        requestAnimationFrame(analyzeFrame);
+    });
 })
 .catch((err) => { alert("カメラ起動エラー: " + err.name); });
 
+// グローバル変数
+let isFound = false;
+let savedX = 0;
+let savedY = 0;
+let imgScale = 1.0;
+let offsetX = 0;
+let offsetY = 0;
+let touchStartDist = 0;
 
-// ==========================================
-// 【新しく追加したグローバル変数】
-// ==========================================
-let isFound = false; // 四角を見つけたかどうかのフラグ
-let savedX = 0;      // 見つけた四角の中心X座標
-let savedY = 0;      // 見つけた四角の中心Y座標
-        // 【新しく追加：画像の大きさ・位置を記憶する変数】
-        let imgScale = 1.0;     // 画像の拡大率（1.0が100%）
-        let offsetX = 0;        // 指で移動させた横の距離
-        let offsetY = 0;        // 指で移動させた縦の距離
-        let touchStartDist = 0; // 2本指の最初の距離
-
-
-// 2. 画像解析ループ（心臓部）
-function analyzeFrame() {
-ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-// 【大正解の処理】：すでに発見しているなら、重い計算をスキップして記憶した場所に描き続ける
-if (isFound) {
-drawAR(savedX, savedY);
-requestAnimationFrame(analyzeFrame);
-return; 
-}
-
-// まだ見つかっていない時だけ動くスキャン処理
-const hiddenCanvas = document.createElement('canvas');
-hiddenCanvas.width = 160;
-hiddenCanvas.height = 120;
-const hCtx = hiddenCanvas.getContext('2d');
-hCtx.drawImage(video, 0, 0, hiddenCanvas.width, hiddenCanvas.height);
-
-try {
-const imgData = hCtx.getImageData(0, 0, hiddenCanvas.width, hiddenCanvas.height);
-const pixels = imgData.data;
-
-let corners = [];
-let threshold = 40;
-
-for (let y = 4; y < hiddenCanvas.height - 4; y += 3) {
-for (let x = 4; x < hiddenCanvas.width - 4; x += 3) {
-const idx = (y * hiddenCanvas.width + x) * 4;
-const current = (pixels[idx] + pixels[idx+1] + pixels[idx+2]) / 3;
-
-const idxRight = (y * hiddenCanvas.width + (x + 2)) * 4;
-const idxBottom = ((y + 2) * hiddenCanvas.width + x) * 4;
-const diffX = Math.abs(current - (pixels[idxRight] + pixels[idxRight+1] + pixels[idxRight+2]) / 3);
-const diffY = Math.abs(current - (pixels[idxBottom] + pixels[idxBottom+1] + pixels[idxBottom+2]) / 3);
-
-if (diffX > threshold && diffY > threshold) {
-let isNew = true;
-for (let c of corners) {
-if (Math.abs(c.x - x) < 15 && Math.abs(c.y - y) < 15) {
-isNew = false;
-break;
-}
-}
-if (isNew) {
-corners.push({ x: x, y: y });
-}
-}
-}
-}
-
-// 角がぴったり4つ見つかった運命の瞬間！
-if (corners.length === 4) {
-let totalX = 0, totalY = 0;
-for (let c of corners) {
-totalX += c.x;
-totalY += c.y;
-}
-
-// 座標を記憶して、発見フラグをオンにする
-savedX = (totalX / 4) * (canvas.width / hiddenCanvas.width);
-savedY = (totalY / 4) * (canvas.height / hiddenCanvas.height);
-isFound = true; 
-}
-} catch (e) {
-// エラー回避
-}
-
-requestAnimationFrame(analyzeFrame);
-}
-
-
-// ==========================================
-// 【文字を描画する専用の共通関数】
-// ==========================================
-// 【新しく追加：画像をメモリに読み込む（VBAのLoadPictureのようなもの）】
+// 画像の読み込み
 const arImage = new Image();
-arImage.src = 'ごーやーフォトスポ.png'; // GitHubにアップしたPNGファイル名とぴったり合わせる
+arImage.src = 'ごーやーフォトスポ.png'; 
 
-        // 文字を描画していた関数を「画像描画」に改造
-                // 【画像描画の関数をタッチ連動用に改造】
-function drawAR(x, y) {
-ctx.save();
+// 画像解析ループ
+function analyzeFrame() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // 緑の照準マークを描く（これは残しておくとロックオン感がでます）
-            ctx.strokeStyle = "#00FF00";
-            ctx.lineWidth = 3;
-            ctx.beginPath();
-            ctx.arc(x, y, 20, 0, Math.PI * 2);
-            ctx.stroke();
+    if (isFound) {
+        drawAR(savedX, savedY);
+        requestAnimationFrame(analyzeFrame);
+        return; 
+    }
 
-            // 【画像の描画処理】
-            // 画像のサイズを指定（例：横200ピクセル、縦200ピクセル）
-            const imgWidth = 200;
-            const imgHeight = 200;
+    // スキャン処理
+    const hiddenCanvas = document.createElement('canvas');
+    hiddenCanvas.width = 160;
+    hiddenCanvas.height = 120;
+    const hCtx = hiddenCanvas.getContext('2d');
+    hCtx.drawImage(video, 0, 0, hiddenCanvas.width, hiddenCanvas.height);
 
-            // マーカーの中心（x, y）に合わせて、画像がど真ん中に来るように引き算して描画
-            ctx.drawImage(
-                arImage, 
-                x - (imgWidth / 2), 
-                y - (imgHeight / 2) - 40, // マーカーの少し上に表示
-                imgWidth, 
-                imgHeight
-            );
-            // 指で移動させた分（offsetX, offsetY）と、ARで見つけた位置（x, y）を合体させる
-            const currentX = x + offsetX;
-            const currentY = y - 40 + offsetY;
+    try {
+        const imgData = hCtx.getImageData(0, 0, hiddenCanvas.width, hiddenCanvas.height);
+        const pixels = imgData.data;
+        let corners = [];
+        let threshold = 40;
 
-            // 基本サイズ（200）に、指で拡大縮小した倍率（imgScale）を掛け算する
-            const imgWidth = 200 * imgScale;
-            const imgHeight = 200 * imgScale;
+        for (let y = 4; y < hiddenCanvas.height - 4; y += 3) {
+            for (let x = 4; x < hiddenCanvas.width - 4; x += 3) {
+                const idx = (y * hiddenCanvas.width + x) * 4;
+                const current = (pixels[idx] + pixels[idx+1] + pixels[idx+2]) / 3;
+                const idxRight = (y * hiddenCanvas.width + (x + 2)) * 4;
+                const idxBottom = ((y + 2) * hiddenCanvas.width + x) * 4;
+                const diffX = Math.abs(current - (pixels[idxRight] + pixels[idxRight+1] + pixels[idxRight+2]) / 3);
+                const diffY = Math.abs(current - (pixels[idxBottom] + pixels[idxBottom+1] + pixels[idxBottom+2]) / 3);
 
-            // 計算した新しい位置と大きさで画像を貼り付ける
-            ctx.drawImage(arImage, currentX - (imgWidth / 2), currentY - (imgHeight / 2), imgWidth, imgHeight);
+                if (diffX > threshold && diffY > threshold) {
+                    let isNew = true;
+                    for (let c of corners) {
+                        if (Math.abs(c.x - x) < 15 && Math.abs(c.y - y) < 15) {
+                            isNew = false;
+                            break;
+                        }
+                    }
+                    if (isNew) corners.push({ x: x, y: y });
+                }
+            }
+        }
 
-ctx.restore();
+        if (corners.length === 4) {
+            let totalX = 0, totalY = 0;
+            for (let c of corners) {
+                totalX += c.x;
+                totalY += c.y;
+            }
+            savedX = (totalX / 4) * (canvas.width / hiddenCanvas.width);
+            savedY = (totalY / 4) * (canvas.height / hiddenCanvas.height);
+            isFound = true; 
+            
+            // マarkerを見つけたらUIを表示する
+            showQuizUI();
+        }
+    } catch (e) {}
+
+    requestAnimationFrame(analyzeFrame);
 }
 
-        // ==========================================
-        // 【スマホのタッチ操作を感知するプログラム（約30行）】
-        // ==========================================
-        let startX = 0, startY = 0;
+// AR画像描画（重複バグを修正）
+function drawAR(x, y) {
+    ctx.save();
 
-        // 画面に指が触れた瞬間
-        window.addEventListener('touchstart', (e) => {
-            if (e.touches.length === 1) { // 1本指（移動の準備）
-                startX = e.touches[0].clientX;
-                startY = e.touches[0].clientY;
-            } else if (e.touches.length === 2) { // 2本指（拡大の準備）
-                // 2つの指の間の距離を計算して記憶
-                touchStartDist = Math.hypot(
-                    e.touches[0].clientX - e.touches[1].clientX,
-                    e.touches[0].clientY - e.touches[1].clientY
-                );
-            }
-        });
+    // 照準マーク
+    ctx.strokeStyle = "#00FF00";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(x, y, 20, 0, Math.PI * 2);
+    ctx.stroke();
 
-        // 指が画面の上を動いている最中（VBAのMouseMoveのようなもの）
-        window.addEventListener('touchmove', (e) => {
-            if (e.touches.length === 1) { // 1本指でスワイプ移動
-                const moveX = e.touches[0].clientX - startX;
-                const moveY = e.touches[0].clientY - startY;
-                offsetX += moveX;
-                offsetY += moveY;
-                startX = e.touches[0].clientX;
-                startY = e.touches[0].clientY;
-            } else if (e.touches.length === 2) { // 2本指でピンチ拡大縮小
-                const dist = Math.hypot(
-                    e.touches[0].clientX - e.touches[1].clientX,
-                    e.touches[0].clientY - e.touches[1].clientY
-                );
-                // 最初の指の距離との比率を計算して拡大率を変える
-                imgScale *= (dist / touchStartDist);
-                touchStartDist = dist;
-            }
-        });
+    // 位置と大きさを計算
+    const currentX = x + offsetX;
+    const currentY = y - 40 + offsetY;
+    const imgWidth = 200 * imgScale;
+    const imgHeight = 200 * imgScale;
 
+    // 画像描画（問題画像として出現）
+    ctx.drawImage(arImage, currentX - (imgWidth / 2), currentY - (imgHeight / 2), imgWidth, imgHeight);
 
+    ctx.restore();
+}
+
+// ==========================================
+// 【クエストUI制御の処理】
+// ==========================================
+function showQuizUI() {
+    if (currentStage >= questData.length) return;
+    
+    isShowingResult = false;
+    const stage = questData[currentStage];
+    
+    // 3択ボタンを組み立てる
+    let optionsHtml = '';
+    stage.options.forEach((opt, index) => {
+        optionsHtml += `<button class="option-btn" onclick="checkAnswer(${index})">${opt}</button>`;
+    });
+
+    uiContent.innerHTML = `
+        <div class="quiz-text">📍 ${stage.location} に到達！</div>
+        <div class="quiz-text">${stage.question}</div>
+        <div class="options-container">${optionsHtml}</div>
+    `;
+    quizUi.classList.add('show');
+}
+
+// 答え合わせの関数
+function checkAnswer(selectedIndex) {
+    const stage = questData[currentStage];
+    
+    if (selectedIndex === stage.correctIndex) {
+        // 正解ならB地点へのヒントを表示
+        isShowingResult = true;
+        
+        // ラストステージかどうかでボタンの文字を変える
+        const isLast = currentStage === questData.length - 1;
+        const btnText = isLast ? "クリア！" : "次のスポットを探す";
+        
+        uiContent.innerHTML = `
+            <div class="hint-text">${stage.hint}</div>
+            <button class="next-btn" onclick="goToNextStage()">${btnText}</button>
+        `;
+    } else {
+        alert("ザンネン！ちがうようだ。もう一度考えてみよう！");
+    }
+}
+
+// 次のステージ（B地点など）へ進む処理
+function goToNextStage() {
+    quizUi.classList.remove('show');
+    
+    // フラグや位置移動の記憶をリセットして次のスキャンに備える
+    isFound = false;
+    offsetX = 0;
+    offsetY = 0;
+    imgScale = 1.0;
+    
+    currentStage++;
+    
+    if (currentStage >= questData.length) {
+        alert("全クエスト完了です！お疲れ様でした！");
+    }
+}
+
+// タッチ操作
+let startX = 0, startY = 0;
+window.addEventListener('touchstart', (e) => {
+    if (e.touches.length === 1) {
+        startX = e.touches[0].clientX;
+        startY = e.touches[0].clientY;
+    } else if (e.touches.length === 2) {
+        touchStartDist = Math.hypot(
+            e.touches[0].clientX - e.touches[1].clientX,
+            e.touches[0].clientY - e.touches[1].clientY
+        );
+    }
+});
+
+window.addEventListener('touchmove', (e) => {
+    if (e.touches.length === 1) {
+        const moveX = e.touches[0].clientX - startX;
+        const moveY = e.touches[0].clientY - startY;
+        offsetX += moveX;
+        offsetY += moveY;
+        startX = e.touches[0].clientX;
+        startY = e.touches[0].clientY;
+    } else if (e.touches.length === 2) {
+        const dist = Math.hypot(
+            e.touches[0].clientX - e.touches[1].clientX,
+            e.touches[0].clientY - e.touches[1].clientY
+        );
+        imgScale *= (dist / touchStartDist);
+        touchStartDist = dist;
+    }
+});
 </script>
 </body>
 </html>
