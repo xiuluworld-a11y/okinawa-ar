@@ -185,7 +185,7 @@ function analyzeFrame() {
         }
 
         // 狭い範囲に25個以上の角が集まっていたら「本物のマーカー」とみなす！
-        if (maxDensity >= 25) {
+        if (maxDensity >= 10) {
             let totalX = 0, totalY = 0;
             for (let c of bestGroup) {
                 totalX += c.x;
