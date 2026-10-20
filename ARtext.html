@@ -173,7 +173,9 @@ function analyzeFrame() {
             }
         }
 
-        if (corners.length === 4) {
+        // 角が10個以上見つかったらマーカー（ロゴ）があると判定する！
+            if (corners.length >= 10) {
+
             let totalX = 0, totalY = 0;
             for (let c of corners) {
                 totalX += c.x;
