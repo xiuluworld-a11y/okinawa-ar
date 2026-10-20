@@ -63,10 +63,8 @@ return;
 
 // まだ見つかっていない時だけ動くスキャン処理
 const hiddenCanvas = document.createElement('canvas');
-            hiddenCanvas.width = 160;
-            hiddenCanvas.height = 120;
-            hiddenCanvas.width = 320;
-            hiddenCanvas.height = 240;
+hiddenCanvas.width = 160;
+hiddenCanvas.height = 120;
 const hCtx = hiddenCanvas.getContext('2d');
 hCtx.drawImage(video, 0, 0, hiddenCanvas.width, hiddenCanvas.height);
 
@@ -113,13 +111,16 @@ savedY = (totalY / corners.length) * (canvas.height / hiddenCanvas.height);
 // ★ここで switch文 を使って、角の数に応じて画像を切り替える！
 switch (corners.length) {
 case 3:
-arImage.src = 'うなぎだーまんゆー.png';        // 三角形ならハブの画像
+                            arImage.src = 'habu.png';        // 三角形ならハブの画像
+                            arImage.src = 'うなぎだーまんゆー.png';        // 三角形ならハブの画像
 break;
 case 4:
-arImage.src = 'ごーやーフォトスポ.png';      // 四角形ならシーサーの画像
+                            arImage.src = 'shiisa.png';      // 四角形ならシーサーの画像
+                            arImage.src = 'ごーやーフォトスポ.png';      // 四角形ならシーサーの画像
 break;
 case 5:
-arImage.src = '初恋広場.png';  // 五角形なら玉泉洞の画像
+                            arImage.src = 'gyokusendo.png';  // 五角形なら玉泉洞の画像
+                            arImage.src = '初恋広場.png';  // 五角形なら玉泉洞の画像
 break;
 }
 
