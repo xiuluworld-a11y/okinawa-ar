@@ -86,7 +86,7 @@ let currentStage = 0;
 const questData = [
     {
         location: "A地点（玉泉洞 入口）",
-        imageSrc: "cave_quest_A.png",
+        imageSrc: "うなぎだーまんゆー_compressed.png",
         question: "【第1問】玉泉洞の鍾乳石は、何年で1センチ伸びると言われている？",
         options: ["約3年", "約30年", "約300年"],
         correctIndex: 1,
@@ -94,7 +94,7 @@ const questData = [
     },
     {
         location: "B地点（青の泉）",
-        imageSrc: "cave_quest_B.png",
+        imageSrc: "ごーやーフォトスポ.png",
         question: "【第2問】鍾乳洞のなかの気温は、年間を通して約何度で一定？",
         options: ["約15度", "約21度", "約28度"],
         correctIndex: 1,
@@ -122,12 +122,12 @@ let touchStartDist = 0;
 // AR表示用の画像オブジェクト
 const arImage = new Image();
 
-// 画像解析ループ
+// 画像解析
 function analyzeFrame() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     if (isFound) {
-        // 画面の「完全な中心」に固定して描画
+        // ★修正点：マーカーの検出位置（savedX, savedY）ではなく、画面の「完全な中心」を渡す
         const centerX = canvas.width / 2;
         const centerY = canvas.height / 2;
         drawAR(centerX, centerY);
@@ -170,8 +170,8 @@ function analyzeFrame() {
             }
         }
 
-        // 四隅に四角がある新しいマーカー対応（角が10個以上）
         if (corners.length >= 10) {
+            // ロックオン時のみ位置計算（中心固定にするため、フラグONのトリガーとして使用）
             let totalX = 0, totalY = 0;
             for (let c of corners) {
                 totalX += c.x;
@@ -180,9 +180,7 @@ function analyzeFrame() {
             savedX = (totalX / corners.length) * (canvas.width / hiddenCanvas.width);
             savedY = (totalY / corners.length) * (canvas.height / hiddenCanvas.height);
             
-            // 画像の読み込みを開始
             arImage.src = questData[currentStage].imageSrc;
-            
             isFound = true; 
             showQuizUI();
         }
@@ -195,20 +193,15 @@ function analyzeFrame() {
 function drawAR(x, y) {
     ctx.save();
 
-    // センター位置の計算（指の移動分をプラス）
+    // ★修正点：画像が完全に中央にくるよう、画面上部への不自然な引き算（-40）を撤去
     const currentX = x + offsetX;
     const currentY = y + offsetY;
-    const imgWidth = 250 * imgScale;
+    const imgWidth = 250 * imgScale;  // 初期サイズを少し見やすく250に拡大
     const imgHeight = 250 * imgScale;
 
-    // 画像のロードが完了していれば描画する
-    if (arImage.complete && arImage.naturalWidth !== 0) {
+    // 画像描画
+    if (arImage.complete) {
         ctx.drawImage(arImage, currentX - (imgWidth / 2), currentY - (imgHeight / 2), imgWidth, imgHeight);
-    } else {
-        // 画像がまだ読み込み中、またはファイル名間違いなどで読み込めない場合、代わりに緑の枠を出す（バグ発見用）
-        ctx.strokeStyle = "#00FF00";
-        ctx.lineWidth = 2;
-        ctx.strokeRect(currentX - (imgWidth / 2), currentY - (imgHeight / 2), imgWidth, imgHeight);
     }
 
     ctx.restore();
@@ -266,7 +259,7 @@ function goToNextStage() {
     }
 }
 
-// タッチ操作（バグを完全に修正しました）
+// タッチ操作（iOS/Android両対応に修正）
 let startX = 0, startY = 0;
 window.addEventListener('touchstart', (e) => {
     if (e.touches.length === 1) {
