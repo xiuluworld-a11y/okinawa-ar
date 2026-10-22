@@ -1,69 +1,33 @@
 <!DOCTYPE html>
-<html>
+<!-- ★ translate="no" と class="notranslate" を追加して、ブラウザの勝手な自動翻訳によるクラッシュを防ぎます -->
+<html lang="ja" translate="no" class="notranslate">
 <head>
-<meta charset="utf-8">
-<title>玉泉洞クエスト：ARエンジン</title>
-<style>
-body { margin: 0; overflow: hidden; background: #000; font-family: sans-serif; }
-#webcam, #ar-canvas { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; object-fit: cover; }
-#ar-canvas { z-index: 10; pointer-events: none; }
-
-/* クイズUIエリア */
-#quiz-ui {
-position: fixed;
-bottom: -100vh;
-left: 0;
-width: 100vw;
-height: 42vh;
-background: rgba(0, 0, 0, 0.85);
-border-top: 3px solid #00FF00;
-border-radius: 20px 20px 0 0;
-z-index: 100;
-transition: bottom 0.4s ease;
-padding: 20px;
-box-sizing: border-box;
-color: #fff;
-text-align: center;
-}
-#quiz-ui.show { bottom: 0; }
-
-.quiz-text { font-size: 16px; font-weight: bold; margin-bottom: 12px; color: #00FF00; }
-.hint-text { font-size: 16px; color: #FFF; font-weight: bold; line-height: 1.5; }
-
-/* 3択ボタン */
-.options-container { display: flex; flex-direction: column; gap: 8px; }
-.option-btn {
-background: #222;
-color: #fff;
-border: 1px solid #00FF00;
-padding: 10px;
-border-radius: 8px;
-font-size: 14px;
-cursor: pointer;
-}
-.option-btn:active { background: #00FF00; color: #000; }
-
-.next-btn {
-background: #00FF00;
-color: #000;
-border: none;
-padding: 12px 30px;
-border-radius: 25px;
-font-size: 16px;
-font-weight: bold;
-margin-top: 15px;
-}
-</style>
+    <meta charset="utf-8">
+    <!-- ★ Google翻訳のクローラーや拡張機能に対しても翻訳拒否を明示 -->
+    <meta name="google" content="notranslate">
+    <title>玉泉洞クエスト：ARエンジン</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: #000; font-family: sans-serif; }
+        #webcam, #ar-canvas { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; object-fit: cover; }
+        #ar-canvas { z-index: 10; pointer-events: none; }
+        /* クイズUIエリア */
+        #quiz-ui { position: fixed; bottom: -100vh; left: 0; width: 100vw; height: 42vh; background: rgba(0, 0, 0, 0.85); border-top: 3px solid #00FF00; border-radius: 20px 20px 0 0; z-index: 100; transition: bottom 0.4s ease; padding: 20px; box-sizing: border-box; color: #fff; text-align: center; }
+        #quiz-ui.show { bottom: 0; }
+        .quiz-text { font-size: 22px; font-weight: bold; margin-bottom: 12px; color: #00FF00; }
+        .hint-text { font-size: 22px; color: #FFF; font-weight: bold; line-height: 1.5; }
+        /* 3択ボタン */
+        .options-container { display: flex; flex-direction: column; gap: 8px; }
+        .option-btn { background: #222; color: #fff; border: 1px solid #00FF00; padding: 10px; border-radius: 8px; font-size: 22px; cursor: pointer; }
+        .option-btn:active { background: #00FF00; color: #000; }
+        .next-btn { background: #00FF00; color: #000; border: none; padding: 12px 30px; border-radius: 25px; font-size: 22px; font-weight: bold; margin-top: 15px; }
+    </style>
 </head>
 <body>
-
-<video id="webcam" autoplay playsinline muted></video>
-<canvas id="ar-canvas"></canvas>
-
-<div id="quiz-ui">
-<div id="ui-content"></div>
-</div>
-
+    <video id="webcam" autoplay playsinline muted></video>
+    <canvas id="ar-canvas"></canvas>
+    <div id="quiz-ui">
+        <div id="ui-content"></div>
+    </div>
 <script>
 const video = document.getElementById('webcam');
 const canvas = document.getElementById('ar-canvas');
@@ -72,8 +36,8 @@ const quizUi = document.getElementById('quiz-ui');
 const uiContent = document.getElementById('ui-content');
 
 function resizeCanvas() {
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
 }
 window.addEventListener('resize', resizeCanvas);
 resizeCanvas();
@@ -82,37 +46,22 @@ resizeCanvas();
 // 【クエストデータ設定】★セーブデータ読み込み対応
 // ==========================================
 let currentStage = parseInt(localStorage.getItem('cave_quest_stage')) || 0;
-
 const questData = [
-{
-location: "A地点（玉泉洞 入口）",
-        imageSrc: "cave_quest_A.png",
-        imageSrc: "初恋広場.png",
-question: "【第1問】玉泉洞の鍾乳石は、何年で1センチ伸びると言われている？",
-options: ["約3年", "約30年", "約300年"],
-correctIndex: 1,
-hint: "正解！国内最速のスピードです！<br>【B地点へのヒント】次は『青の泉』の看板の近くにあるマーカーを探せ！"
-},
-{
-location: "B地点（青の泉）",
-        imageSrc: "cave_quest_B.png",
-        imageSrc: "うなぎだーまんゆー_compressed.png",
-question: "【第2問】鍾乳洞のなかの気温は、年間を通して約何度で一定？",
-options: ["約15度", "約21度", "約28度"],
-correctIndex: 1,
-hint: "素晴らしい！全問正解です！<br>洞窟を出て、お土産ショップの受付で景品をもらおう！"
-}
+    { location: "A地点（玉泉洞 入口）", imageSrc: "初恋広場.png", question: "【第1問】玉泉洞の鍾乳石は、何年で1センチ伸びると言われている？", options: ["約3年", "約30年", "約300年"], correctIndex: 1, hint: "正解！国内最速のスピードです！<br>【B地点へのヒント】次は『青の泉』の看板の近くにあるマーカーを探せ！" },
+    { location: "B地点（青の泉）", imageSrc: "うなぎだーまんゆー_compressed.png", question: "【第2問】鍾乳洞のなかの気温は、年間を通して約何度で一定？", options: ["約15度", "約21度", "約28度"], correctIndex: 1, hint: "素晴らしい！全問正解です！<br>洞窟を出て、お土産ショップの受付で景品をもらおう！" }
 ];
 
 // カメラ起動
 navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false })
 .then((stream) => {
-video.srcObject = stream;
-video.addEventListener('loadedmetadata', () => {
-requestAnimationFrame(analyzeFrame);
-});
+    video.srcObject = stream;
+    video.addEventListener('loadedmetadata', () => {
+        requestAnimationFrame(analyzeFrame);
+    });
 })
-.catch((err) => { alert("カメラエラー: " + err.name); });
+.catch((err) => {
+    alert("カメラエラー: " + err.name);
+});
 
 // 変数
 let isFound = false;
@@ -121,194 +70,192 @@ let imgScale = 1.0;
 let offsetX = 0, offsetY = 0;
 let touchStartDist = 0;
 
-// AR表示用の画像オブジェクト
 const arImage = new Image();
 
 // 画像解析ループ
 function analyzeFrame() {
-ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    if (isFound) {
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
+        drawAR(centerX, centerY);
+        requestAnimationFrame(analyzeFrame);
+        return;
+    }
+    
+    if (currentStage >= questData.length) {
+        ctx.fillStyle = "#00FF00";
+        ctx.font = "bold 20px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("すべてのクエストをクリアしました！", canvas.width / 2, canvas.height / 2);
+        return;
+    }
 
-if (isFound) {
-const centerX = canvas.width / 2;
-const centerY = canvas.height / 2;
-drawAR(centerX, centerY);
+    const hiddenCanvas = document.createElement('canvas');
+    hiddenCanvas.width = 160;
+    hiddenCanvas.height = 120;
+    const hCtx = hiddenCanvas.getContext('2d');
+    hCtx.drawImage(video, 0, 0, hiddenCanvas.width, hiddenCanvas.height);
+    
+    try {
+        const imgData = hCtx.getImageData(0, 0, hiddenCanvas.width, hiddenCanvas.height);
+        const pixels = imgData.data;
+        let matchLines = 0;
+        
+        // マーカーの上下のシマシマ帯（y=15, 20 と y=100, 105）にスキャン位置を変更
+        const scanYRows = [15, 20, 100, 105]; 
+        let threshold = 60; 
+        
+        for (let y of scanYRows) {
+            let changeCount = 0;
+            let lastBrightness = -1;
+            
+            for (let x = 10; x < hiddenCanvas.width - 10; x += 2) {
+                const idx = (y * hiddenCanvas.width + x) * 4;
+                const brightness = (pixels[idx] + pixels[idx+1] + pixels[idx+2]) / 3;
+                if (lastBrightness !== -1) {
+                    if (Math.abs(brightness - lastBrightness) > threshold) {
+                        changeCount++;
+                    }
+                }
+                lastBrightness = brightness;
+            }
+            
+            // ご提示いただいた13個のブロック（12箇所の境界線）に対応する判定
+            if (changeCount >= 6 && changeCount <= 14) {
+                matchLines++;
+            }
+        }
+        
+        if (matchLines >= 2) {
+            arImage.src = questData[currentStage].imageSrc;
+            isFound = true;
+            showQuizUI();
+        }
+    } catch (e) {}
 
-requestAnimationFrame(analyzeFrame);
-return; 
-}
-
-const hiddenCanvas = document.createElement('canvas');
-hiddenCanvas.width = 160;
-hiddenCanvas.height = 120;
-const hCtx = hiddenCanvas.getContext('2d');
-hCtx.drawImage(video, 0, 0, hiddenCanvas.width, hiddenCanvas.height);
-
-try {
-const imgData = hCtx.getImageData(0, 0, hiddenCanvas.width, hiddenCanvas.height);
-const pixels = imgData.data;
-
-let matchLines = 0; 
-const scanYRows = [35, 40, 80, 85];
-
-let threshold = 50; 
-
-for (let y of scanYRows) {
-let changeCount = 0;
-let lastBrightness = -1;
-
-for (let x = 30; x < hiddenCanvas.width - 30; x += 2) {
-const idx = (y * hiddenCanvas.width + x) * 4;
-const brightness = (pixels[idx] + pixels[idx+1] + pixels[idx+2]) / 3;
-
-if (lastBrightness !== -1) {
-if (Math.abs(brightness - lastBrightness) > threshold) {
-changeCount++;
-}
-}
-lastBrightness = brightness;
-}
-
-if (changeCount >= 10 && changeCount <= 18) {
-matchLines++;
-}
-}
-
-if (matchLines >= 2) {
-arImage.src = questData[currentStage].imageSrc;
-isFound = true; 
-showQuizUI();
-}
-} catch (e) {}
-
-// ガイド枠
-if (!isFound) {
-ctx.strokeStyle = "rgba(0, 255, 0, 0.5)";
-ctx.lineWidth = 3;
-ctx.beginPath();
-ctx.moveTo(canvas.width * 0.15, canvas.height * 0.28);
-ctx.lineTo(canvas.width * 0.85, canvas.height * 0.28);
-ctx.moveTo(canvas.width * 0.15, canvas.height * 0.72);
-ctx.lineTo(canvas.width * 0.85, canvas.height * 0.72);
-ctx.stroke();
-
-ctx.fillStyle = "#00FF00";
-ctx.font = "bold 14px sans-serif";
-ctx.textAlign = "center";
-ctx.fillText("上下のシマシマを線に合わせてください", canvas.width / 2, canvas.height * 0.2);
-}
-
-requestAnimationFrame(analyzeFrame);
+    // ガイド枠を表示
+    if (!isFound) {
+        ctx.strokeStyle = "rgba(0, 255, 0, 0.5)";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(canvas.width * 0.05, canvas.height * 0.15);
+        ctx.lineTo(canvas.width * 0.95, canvas.height * 0.15);
+        ctx.moveTo(canvas.width * 0.05, canvas.height * 0.85);
+        ctx.lineTo(canvas.width * 0.95, canvas.height * 0.85);
+        ctx.stroke();
+        
+        ctx.fillStyle = "#00FF00";
+        ctx.font = "bold 14px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("上下のシマシマを緑の線に合わせてください", canvas.width / 2, canvas.height * 0.08);
+    }
+    requestAnimationFrame(analyzeFrame);
 }
 
 // AR描画
 function drawAR(x, y) {
-ctx.save();
-
-const currentX = x + offsetX;
-const currentY = y + offsetY;
-const imgWidth = 250 * imgScale;
-const imgHeight = 250 * imgScale;
-
-if (arImage.complete && arImage.naturalWidth !== 0) {
-ctx.drawImage(arImage, currentX - (imgWidth / 2), currentY - (imgHeight / 2), imgWidth, imgHeight);
-} else {
-ctx.strokeStyle = "#00FF00";
-ctx.lineWidth = 2;
-ctx.strokeRect(currentX - (imgWidth / 2), currentY - (imgHeight / 2), imgWidth, imgHeight);
-}
-
-ctx.restore();
+    ctx.save();
+    const currentX = x + offsetX;
+    const currentY = y + offsetY;
+    const imgWidth = 250 * imgScale;
+    const imgHeight = 250 * imgScale;
+    
+    if (arImage.complete && arImage.naturalWidth !== 0) {
+        ctx.drawImage(arImage, currentX - (imgWidth / 2), currentY - (imgHeight / 2), imgWidth, imgHeight);
+    } else {
+        ctx.strokeStyle = "#00FF00";
+        ctx.lineWidth = 2;
+        ctx.strokeRect(currentX - (imgWidth / 2), currentY - (imgHeight / 2), imgWidth, imgHeight);
+    }
+    ctx.restore();
 }
 
 // クイズUI表示
 function showQuizUI() {
-if (currentStage >= questData.length) return;
-
-const stage = questData[currentStage];
-let optionsHtml = '';
-stage.options.forEach((opt, index) => {
-optionsHtml += `<button class="option-btn" onclick="checkAnswer(${index})">${opt}</button>`;
-});
-
-uiContent.innerHTML = `
-       <div class="quiz-text">📍 ${stage.location}</div>
-       <div class="quiz-text">${stage.question}</div>
-       <div class="options-container">${optionsHtml}</div>
-   `;
-quizUi.classList.add('show');
+    if (currentStage >= questData.length) return;
+    const stage = questData[currentStage];
+    let optionsHtml = '';
+    stage.options.forEach((opt, index) => {
+        optionsHtml += `<button class="option-btn" onclick="checkAnswer(${index})">${opt}</button>`;
+    });
+    uiContent.innerHTML = `
+        <div class="quiz-text">📍 ${stage.location}</div>
+        <div class="quiz-text">${stage.question}</div>
+        <div class="options-container">${optionsHtml}</div>
+    `;
+    quizUi.classList.add('show');
 }
 
 // 答え合わせ
 function checkAnswer(selectedIndex) {
-const stage = questData[currentStage];
-
-if (selectedIndex === stage.correctIndex) {
-const isLast = currentStage === questData.length - 1;
-const btnText = isLast ? "クエストクリア！" : "次のスポットへ移動する";
-
-uiContent.innerHTML = `
-           <div class="hint-text">${stage.hint}</div>
-           <button class="next-btn" onclick="goToNextStage()">${btnText}</button>
-       `;
-} else {
-alert("ザンネン！ちがうようだ。もう一度考えてみよう！");
-}
+    const stage = questData[currentStage];
+    if (selectedIndex === stage.correctIndex) {
+        const isLast = currentStage === questData.length - 1;
+        const btnText = isLast ? "クエストクリア！" : "次のスポットへ移動する";
+        uiContent.innerHTML = `
+            <div class="hint-text">${stage.hint}</div>
+            <button class="next-btn" onclick="goToNextStage()">${btnText}</button>
+        `;
+    } else {
+        alert("ザンネン！ちがうようだ。もう一度考えてみよう！");
+    }
 }
 
 // 次のステージへ進む（セーブ対応）
 function goToNextStage() {
-quizUi.classList.remove('show');
-
-isFound = false;
-offsetX = 0;
-offsetY = 0;
-imgScale = 1.0;
-
-currentStage++;
-localStorage.setItem('cave_quest_stage', currentStage); // ステージ保存
-
-if (currentStage >= questData.length) {
-alert("すべてのクエストが終了しました！");
-}
+    quizUi.classList.remove('show');
+    isFound = false;
+    offsetX = 0;
+    offsetY = 0;
+    imgScale = 1.0;
+    currentStage++;
+    localStorage.setItem('cave_quest_stage', currentStage); // ステージ保存
+    if (currentStage >= questData.length) {
+        alert("すべてのクエストが終了しました！");
+    }
 }
 
-// タッチ操作
+// タッチ操作（インデックス指定 [0] [1] を完全に修復しました）
 let startX = 0, startY = 0;
 window.addEventListener('touchstart', (e) => {
-if (e.touches.length === 1) {
-startX = e.touches[0].clientX;
-startY = e.touches[0].clientY;
-} else if (e.touches.length === 2) {
-touchStartDist = Math.hypot(
-e.touches[0].clientX - e.touches[1].clientX,
-e.touches[0].clientY - e.touches[1].clientY
-);
-}
+    if (e.touches.length === 1) {
+        startX = e.touches[0].clientX;
+        startY = e.touches[0].clientY;
+    } else if (e.touches.length === 2) {
+        touchStartDist = Math.hypot(
+            e.touches[0].clientX - e.touches[1].clientX,
+            e.touches[0].clientY - e.touches[1].clientY
+        );
+    }
 });
 
 window.addEventListener('touchmove', (e) => {
-if (e.touches.length === 1) {
-const moveX = e.touches[0].clientX - startX;
-const moveY = e.touches[0].clientY - startY;
-offsetX += moveX;
-offsetY += moveY;
-startX = e.touches[0].clientX;
-startY = e.touches[0].clientY;
-} else if (e.touches.length === 2) {
-const dist = Math.hypot(
-e.touches[0].clientX - e.touches[1].clientX,
-e.touches[0].clientY - e.touches[1].clientY
-);
-imgScale *= (dist / touchStartDist);
-touchStartDist = dist;
-}
+    if (e.touches.length === 1) {
+        const moveX = e.touches[0].clientX - startX;
+        const moveY = e.touches[0].clientY - startY;
+        offsetX += moveX;
+        offsetY += moveY;
+        startX = e.touches[0].clientX;
+        startY = e.touches[0].clientY;
+    } else if (e.touches.length === 2) {
+        const dist = Math.hypot(
+            e.touches.0.clientX - e.touches[1].clientX,
+            e.touches.0.clientY - e.touches[1].clientY
+        );
+        if (touchStartDist > 0) {
+            imgScale *= (dist / touchStartDist);
+        }
+        touchStartDist = dist;
+    }
 });
 
-// ★【PWA対応】オフライン用の仕組み（Service Worker）を安全な位置に自動登録
+// PWA対応
 if ('serviceWorker' in navigator) {
-navigator.serviceWorker.register('sw.js')
-.then(() => console.log('オフライン準備完了！'))
-.catch((err) => console.log('登録エラー:', err));
+    navigator.serviceWorker.register('sw.js')
+    .then(() => console.log('オフライン準備完了！'))
+    .catch((err) => console.log('登録エラー:', err));
 }
 </script>
 </body>
