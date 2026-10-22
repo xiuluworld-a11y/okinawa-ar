@@ -1,9 +1,7 @@
 <!DOCTYPE html>
-<!-- ★ translate="no" と class="notranslate" を追加して、ブラウザの勝手な自動翻訳によるクラッシュを防ぎます -->
 <html lang="ja" translate="no" class="notranslate">
 <head>
     <meta charset="utf-8">
-    <!-- ★ Google翻訳のクローラーや拡張機能に対しても翻訳拒否を明示 -->
     <meta name="google" content="notranslate">
     <title>玉泉洞クエスト：ARエンジン</title>
     <style>
@@ -103,31 +101,35 @@ function analyzeFrame() {
         const pixels = imgData.data;
         let matchLines = 0;
         
-        // マーカーの上下のシマシマ帯（y=15, 20 と y=100, 105）にスキャン位置を変更
-        const scanYRows = [15, 20, 100, 105]; 
-        let threshold = 60; 
+        // ★【最重要変更】シマシマの超細い幅（上端 y=7, 9 / 下端 y=111, 113）をピンポイント狙い撃ち
+        const scanYRows =; 
+        let threshold = 55; 
         
         for (let y of scanYRows) {
             let changeCount = 0;
             let lastBrightness = -1;
             
-            for (let x = 10; x < hiddenCanvas.width - 10; x += 2) {
+            // ★スキャン漏れを防ぐため 1ピクセル刻み（x++）で全走査に変更
+            for (let x = 5; x < hiddenCanvas.width - 5; x++) {
                 const idx = (y * hiddenCanvas.width + x) * 4;
                 const brightness = (pixels[idx] + pixels[idx+1] + pixels[idx+2]) / 3;
                 if (lastBrightness !== -1) {
                     if (Math.abs(brightness - lastBrightness) > threshold) {
                         changeCount++;
+                        // 連続する微小なブレでの多重カウントを防ぐため、1マス進める
+                        x += 2; 
                     }
                 }
                 lastBrightness = brightness;
             }
             
-            // ご提示いただいた13個のブロック（12箇所の境界線）に対応する判定
+            // マーカー全体の13ブロック（境界12箇所）を、カメラの距離や見切れを想定して「6〜14回」で許容
             if (changeCount >= 6 && changeCount <= 14) {
                 matchLines++;
             }
         }
         
+        // 4本のスキャンラインのうち2本以上合格でAR展開
         if (matchLines >= 2) {
             arImage.src = questData[currentStage].imageSrc;
             isFound = true;
@@ -135,21 +137,22 @@ function analyzeFrame() {
         }
     } catch (e) {}
 
-    // ガイド枠を表示
+    // ガイド枠を表示（実際のシマシマの位置にガイド線を追従）
     if (!isFound) {
-        ctx.strokeStyle = "rgba(0, 255, 0, 0.5)";
-        ctx.lineWidth = 3;
+        ctx.strokeStyle = "rgba(0, 255, 0, 0.6)";
+        ctx.lineWidth = 4;
         ctx.beginPath();
-        ctx.moveTo(canvas.width * 0.05, canvas.height * 0.15);
-        ctx.lineTo(canvas.width * 0.95, canvas.height * 0.15);
-        ctx.moveTo(canvas.width * 0.05, canvas.height * 0.85);
-        ctx.lineTo(canvas.width * 0.95, canvas.height * 0.85);
+        // マーカーのシマシマの細さに合わせて、ガイド線を画面の端（上部7%、下部93%）へ寄せました
+        ctx.moveTo(canvas.width * 0.02, canvas.height * 0.07);
+        ctx.lineTo(canvas.width * 0.98, canvas.height * 0.07);
+        ctx.moveTo(canvas.width * 0.02, canvas.height * 0.93);
+        ctx.lineTo(canvas.width * 0.98, canvas.height * 0.93);
         ctx.stroke();
         
         ctx.fillStyle = "#00FF00";
         ctx.font = "bold 14px sans-serif";
         ctx.textAlign = "center";
-        ctx.fillText("上下のシマシマを緑の線に合わせてください", canvas.width / 2, canvas.height * 0.08);
+        ctx.fillText("上下のシマシマ帯を、画面端の緑の線に合わせてください", canvas.width / 2, canvas.height * 0.04);
     }
     requestAnimationFrame(analyzeFrame);
 }
@@ -217,7 +220,7 @@ function goToNextStage() {
     }
 }
 
-// タッチ操作（インデックス指定 [0] [1] を完全に修復しました）
+// タッチ操作
 let startX = 0, startY = 0;
 window.addEventListener('touchstart', (e) => {
     if (e.touches.length === 1) {
@@ -241,8 +244,8 @@ window.addEventListener('touchmove', (e) => {
         startY = e.touches[0].clientY;
     } else if (e.touches.length === 2) {
         const dist = Math.hypot(
-            e.touches.0.clientX - e.touches[1].clientX,
-            e.touches.0.clientY - e.touches[1].clientY
+            e.touches[0].clientX - e.touches[1].clientX,
+            e.touches[0].clientY - e.touches[1].clientY
         );
         if (touchStartDist > 0) {
             imgScale *= (dist / touchStartDist);
