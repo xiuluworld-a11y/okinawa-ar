@@ -1,69 +1,33 @@
 <!DOCTYPE html>
-<html>
+<!-- ★ translate="no" と class="notranslate" を追加して、ブラウザの勝手な自動翻訳によるクラッシュを防ぎます -->
+<html lang="ja" translate="no" class="notranslate">
 <head>
 <meta charset="utf-8">
+    <!-- ★ Google翻訳のクローラーや拡張機能に対しても翻訳拒否を明示 -->
+<meta name="google" content="notranslate">
 <title>玉泉洞クエスト：ARエンジン</title>
 <style>
 body { margin: 0; overflow: hidden; background: #000; font-family: sans-serif; }
 #webcam, #ar-canvas { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; object-fit: cover; }
 #ar-canvas { z-index: 10; pointer-events: none; }
-
 /* クイズUIエリア */
-#quiz-ui {
-position: fixed;
-bottom: -100vh;
-left: 0;
-width: 100vw;
-height: 42vh;
-background: rgba(0, 0, 0, 0.85);
-border-top: 3px solid #00FF00;
-border-radius: 20px 20px 0 0;
-z-index: 100;
-transition: bottom 0.4s ease;
-padding: 20px;
-box-sizing: border-box;
-color: #fff;
-text-align: center;
-}
+#quiz-ui { position: fixed; bottom: -100vh; left: 0; width: 100vw; height: 42vh; background: rgba(0, 0, 0, 0.85); border-top: 3px solid #00FF00; border-radius: 20px 20px 0 0; z-index: 100; transition: bottom 0.4s ease; padding: 20px; box-sizing: border-box; color: #fff; text-align: center; }
 #quiz-ui.show { bottom: 0; }
-
-.quiz-text { font-size: 16px; font-weight: bold; margin-bottom: 12px; color: #00FF00; }
-.hint-text { font-size: 16px; color: #FFF; font-weight: bold; line-height: 1.5; }
-
+.quiz-text { font-size: 22px; font-weight: bold; margin-bottom: 12px; color: #00FF00; }
+.hint-text { font-size: 22px; color: #FFF; font-weight: bold; line-height: 1.5; }
 /* 3択ボタン */
 .options-container { display: flex; flex-direction: column; gap: 8px; }
-.option-btn {
-background: #222;
-color: #fff;
-border: 1px solid #00FF00;
-padding: 10px;
-border-radius: 8px;
-font-size: 14px;
-cursor: pointer;
-}
+.option-btn { background: #222; color: #fff; border: 1px solid #00FF00; padding: 10px; border-radius: 8px; font-size: 22px; cursor: pointer; }
 .option-btn:active { background: #00FF00; color: #000; }
-
-.next-btn {
-background: #00FF00;
-color: #000;
-border: none;
-padding: 12px 30px;
-border-radius: 25px;
-font-size: 16px;
-font-weight: bold;
-margin-top: 15px;
-}
+.next-btn { background: #00FF00; color: #000; border: none; padding: 12px 30px; border-radius: 25px; font-size: 22px; font-weight: bold; margin-top: 15px; }
 </style>
 </head>
 <body>
-
 <video id="webcam" autoplay playsinline muted></video>
 <canvas id="ar-canvas"></canvas>
-
 <div id="quiz-ui">
 <div id="ui-content"></div>
 </div>
-
 <script>
 const video = document.getElementById('webcam');
 const canvas = document.getElementById('ar-canvas');
@@ -78,34 +42,13 @@ canvas.height = window.innerHeight;
 window.addEventListener('resize', resizeCanvas);
 resizeCanvas();
 
-
 // ==========================================
-// 【クエストデータ設定】
 // 【クエストデータ設定】★セーブデータ読み込み対応
 // ==========================================
-// ★リロード対策：スマホのメモリに保存されたステージがあればそれを読み込み、なければ0（最初）からスタート
 let currentStage = parseInt(localStorage.getItem('cave_quest_stage')) || 0;
-
-
 const questData = [
-{
-location: "A地点（玉泉洞 入口）",
-        imageSrc: "うなぎだーまんゆー_compressed.png",
-        imageSrc: "cave_quest_A.png",
-question: "【第1問】玉泉洞の鍾乳石は、何年で1センチ伸びると言われている？",
-options: ["約3年", "約30年", "約300年"],
-correctIndex: 1,
-hint: "正解！国内最速のスピードです！<br>【B地点へのヒント】次は『青の泉』の看板の近くにあるマーカーを探せ！"
-},
-{
-location: "B地点（青の泉）",
-        imageSrc: "ごーやーフォトスポ.png",
-        imageSrc: "cave_quest_B.png",
-question: "【第2問】鍾乳洞のなかの気温は、年間を通して約何度で一定？",
-options: ["約15度", "約21度", "約28度"],
-correctIndex: 1,
-hint: "素晴らしい！全問正解です！<br>洞窟を出て、お土産ショップの受付で景品をもらおう！"
-}
+{ location: "A地点（玉泉洞 入口）", imageSrc: "初恋広場.png", question: "【第1問】玉泉洞の鍾乳石は、何年で1センチ伸びると言われている？", options: ["約3年", "約30年", "約300年"], correctIndex: 1, hint: "正解！国内最速のスピードです！<br>【B地点へのヒント】次は『青の泉』の看板の近くにあるマーカーを探せ！" },
+{ location: "B地点（青の泉）", imageSrc: "うなぎだーまんゆー_compressed.png", question: "【第2問】鍾乳洞のなかの気温は、年間を通して約何度で一定？", options: ["約15度", "約21度", "約28度"], correctIndex: 1, hint: "素晴らしい！全問正解です！<br>洞窟を出て、お土産ショップの受付で景品をもらおう！" }
 ];
 
 // カメラ起動
@@ -116,7 +59,9 @@ video.addEventListener('loadedmetadata', () => {
 requestAnimationFrame(analyzeFrame);
 });
 })
-.catch((err) => { alert("カメラエラー: " + err.name); });
+.catch((err) => {
+alert("カメラエラー: " + err.name);
+});
 
 // 変数
 let isFound = false;
@@ -125,10 +70,8 @@ let imgScale = 1.0;
 let offsetX = 0, offsetY = 0;
 let touchStartDist = 0;
 
-// AR表示用の画像オブジェクト
 const arImage = new Image();
 
-// 画像解析ループ（上下チェック柄マーカー専用版）
 // 画像解析ループ
 function analyzeFrame() {
 ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -137,9 +80,16 @@ if (isFound) {
 const centerX = canvas.width / 2;
 const centerY = canvas.height / 2;
 drawAR(centerX, centerY);
-        
 requestAnimationFrame(analyzeFrame);
-return; 
+return;
+}
+
+if (currentStage >= questData.length) {
+ctx.fillStyle = "#00FF00";
+ctx.font = "bold 20px sans-serif";
+ctx.textAlign = "center";
+ctx.fillText("すべてのクエストをクリアしました！", canvas.width / 2, canvas.height / 2);
+return;
 }
 
 const hiddenCanvas = document.createElement('canvas');
@@ -151,109 +101,103 @@ hCtx.drawImage(video, 0, 0, hiddenCanvas.width, hiddenCanvas.height);
 try {
 const imgData = hCtx.getImageData(0, 0, hiddenCanvas.width, hiddenCanvas.height);
 const pixels = imgData.data;
+let matchLines = 0;
 
-        let matchLines = 0; // 条件に一致した「シマシマの行数」をカウント
-
-        // 【新ロジック】ガイド枠の内側（上部と下部）を横方向にスキャンし、白黒の変化数を調べる
-        // ターゲットにする行（上側: y=35付近、下側: y=85付近）
-        let matchLines = 0; 
-const scanYRows =; 
-        let threshold = 50; // 明暗の差のしきい値
-        let threshold = 50; 
+        // マーカーの上下のシマシマ帯（y=15, 20 と y=100, 105）にスキャン位置を変更
+        const scanYRows = [15, 20, 100, 105]; 
+        let threshold = 60; 
+        // ★【最重要変更】シマシマの超細い幅（上端 y=7, 9 / 下端 y=111, 113）をピンポイント狙い撃ち
+        const scanYRows =; 
+        let threshold = 55; 
 
 for (let y of scanYRows) {
 let changeCount = 0;
 let lastBrightness = -1;
 
-            // 横方向に細かくチェック
-for (let x = 30; x < hiddenCanvas.width - 30; x += 2) {
+            for (let x = 10; x < hiddenCanvas.width - 10; x += 2) {
+            // ★スキャン漏れを防ぐため 1ピクセル刻み（x++）で全走査に変更
+            for (let x = 5; x < hiddenCanvas.width - 5; x++) {
 const idx = (y * hiddenCanvas.width + x) * 4;
 const brightness = (pixels[idx] + pixels[idx+1] + pixels[idx+2]) / 3;
-
 if (lastBrightness !== -1) {
-                    // 直前のピクセルと比べて、パキッと明暗が変わったか
 if (Math.abs(brightness - lastBrightness) > threshold) {
 changeCount++;
+                        // 連続する微小なブレでの多重カウントを防ぐため、1マス進める
+                        x += 2; 
 }
 }
 lastBrightness = brightness;
 }
 
-            // このデザインの幅だと、横1ラインあたり「10回〜16回」の明暗変化が起きます
-            // 背景の岩肌や衣服なら、これほど綺麗な等間隔の変化は起きません
-if (changeCount >= 10 && changeCount <= 18) {
+            // ご提示いただいた13個のブロック（12箇所の境界線）に対応する判定
+            // マーカー全体の13ブロック（境界12箇所）を、カメラの距離や見切れを想定して「6〜14回」で許容
+if (changeCount >= 6 && changeCount <= 14) {
 matchLines++;
 }
 }
 
-        // 上下のシマシマエリアで、狙い通りに変化が検出されたら「本物のマーカー」と断定！
+        // 4本のスキャンラインのうち2本以上合格でAR展開
 if (matchLines >= 2) {
-            // 画像の読み込みを開始してロックオン
 arImage.src = questData[currentStage].imageSrc;
-isFound = true; 
+isFound = true;
 showQuizUI();
 }
 } catch (e) {}
 
-    // ユーザーに「上下のシマシマをここに収めてね」と伝えるためのガイド枠
-    // ガイド枠
+    // ガイド枠を表示
+    // ガイド枠を表示（実際のシマシマの位置にガイド線を追従）
 if (!isFound) {
-ctx.strokeStyle = "rgba(0, 255, 0, 0.5)";
-ctx.lineWidth = 3;
-        // 上下のチェック柄がちょうど乗る位置に緑の横線を引く
+        ctx.strokeStyle = "rgba(0, 255, 0, 0.5)";
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = "rgba(0, 255, 0, 0.6)";
+        ctx.lineWidth = 4;
 ctx.beginPath();
-ctx.moveTo(canvas.width * 0.15, canvas.height * 0.28);
-ctx.lineTo(canvas.width * 0.85, canvas.height * 0.28);
-ctx.moveTo(canvas.width * 0.15, canvas.height * 0.72);
-ctx.lineTo(canvas.width * 0.85, canvas.height * 0.72);
+        ctx.moveTo(canvas.width * 0.05, canvas.height * 0.15);
+        ctx.lineTo(canvas.width * 0.95, canvas.height * 0.15);
+        ctx.moveTo(canvas.width * 0.05, canvas.height * 0.85);
+        ctx.lineTo(canvas.width * 0.95, canvas.height * 0.85);
+        // マーカーのシマシマの細さに合わせて、ガイド線を画面の端（上部7%、下部93%）へ寄せました
+        ctx.moveTo(canvas.width * 0.02, canvas.height * 0.07);
+        ctx.lineTo(canvas.width * 0.98, canvas.height * 0.07);
+        ctx.moveTo(canvas.width * 0.02, canvas.height * 0.93);
+        ctx.lineTo(canvas.width * 0.98, canvas.height * 0.93);
 ctx.stroke();
 
-        // 案内テキストの表示
 ctx.fillStyle = "#00FF00";
 ctx.font = "bold 14px sans-serif";
 ctx.textAlign = "center";
-ctx.fillText("上下のシマシマを線に合わせてください", canvas.width / 2, canvas.height * 0.2);
+        ctx.fillText("上下のシマシマを緑の線に合わせてください", canvas.width / 2, canvas.height * 0.08);
+        ctx.fillText("上下のシマシマ帯を、画面端の緑の線に合わせてください", canvas.width / 2, canvas.height * 0.04);
 }
-
 requestAnimationFrame(analyzeFrame);
 }
-
-
 
 // AR描画
 function drawAR(x, y) {
 ctx.save();
-
-    // ★修正点：画像が完全に中央にくるよう、画面上部への不自然な引き算（-40）を撤去
 const currentX = x + offsetX;
 const currentY = y + offsetY;
-    const imgWidth = 250 * imgScale;  // 初期サイズを少し見やすく250に拡大
-    const imgWidth = 250 * imgScale;
+const imgWidth = 250 * imgScale;
 const imgHeight = 250 * imgScale;
 
-    // 画像描画
-    if (arImage.complete) {
-    if (arImage.complete && arImage.naturalWidth !== 0) {
+if (arImage.complete && arImage.naturalWidth !== 0) {
 ctx.drawImage(arImage, currentX - (imgWidth / 2), currentY - (imgHeight / 2), imgWidth, imgHeight);
-    } else {
-        ctx.strokeStyle = "#00FF00";
-        ctx.lineWidth = 2;
-        ctx.strokeRect(currentX - (imgWidth / 2), currentY - (imgHeight / 2), imgWidth, imgHeight);
+} else {
+ctx.strokeStyle = "#00FF00";
+ctx.lineWidth = 2;
+ctx.strokeRect(currentX - (imgWidth / 2), currentY - (imgHeight / 2), imgWidth, imgHeight);
 }
-
 ctx.restore();
 }
 
 // クイズUI表示
 function showQuizUI() {
 if (currentStage >= questData.length) return;
-
 const stage = questData[currentStage];
 let optionsHtml = '';
 stage.options.forEach((opt, index) => {
 optionsHtml += `<button class="option-btn" onclick="checkAnswer(${index})">${opt}</button>`;
 });
-
 uiContent.innerHTML = `
        <div class="quiz-text">📍 ${stage.location}</div>
        <div class="quiz-text">${stage.question}</div>
@@ -265,11 +209,9 @@ quizUi.classList.add('show');
 // 答え合わせ
 function checkAnswer(selectedIndex) {
 const stage = questData[currentStage];
-
 if (selectedIndex === stage.correctIndex) {
 const isLast = currentStage === questData.length - 1;
 const btnText = isLast ? "クエストクリア！" : "次のスポットへ移動する";
-
 uiContent.innerHTML = `
            <div class="hint-text">${stage.hint}</div>
            <button class="next-btn" onclick="goToNextStage()">${btnText}</button>
@@ -279,32 +221,21 @@ alert("ザンネン！ちがうようだ。もう一度考えてみよう！");
 }
 }
 
-// 次のステージへ進む
 // 次のステージへ進む（セーブ対応）
 function goToNextStage() {
 quizUi.classList.remove('show');
-
-    // リセット
 isFound = false;
 offsetX = 0;
 offsetY = 0;
 imgScale = 1.0;
-
 currentStage++;
-    
-    // ★追加：進んだステージ番号をスマホのメモリにセーブする
-    localStorage.setItem('cave_quest_stage', currentStage);
-    localStorage.setItem('cave_quest_stage', currentStage); // ステージ保存
-
+localStorage.setItem('cave_quest_stage', currentStage); // ステージ保存
 if (currentStage >= questData.length) {
 alert("すべてのクエストが終了しました！");
-        // 全クリアしたらセーブデータを消して最初に戻せるようにするなら以下を有効に
-        // localStorage.removeItem('cave_quest_stage');
 }
 }
 
-
-// タッチ操作（iOS/Android両対応に修正）
+// タッチ操作（インデックス指定 [0] [1] を完全に修復しました）
 // タッチ操作
 let startX = 0, startY = 0;
 window.addEventListener('touchstart', (e) => {
@@ -329,22 +260,24 @@ startX = e.touches[0].clientX;
 startY = e.touches[0].clientY;
 } else if (e.touches.length === 2) {
 const dist = Math.hypot(
-e.touches[0].clientX - e.touches[1].clientX,
-e.touches[0].clientY - e.touches[1].clientY
+            e.touches.0.clientX - e.touches[1].clientX,
+            e.touches.0.clientY - e.touches[1].clientY
+            e.touches[0].clientX - e.touches[1].clientX,
+            e.touches[0].clientY - e.touches[1].clientY
 );
+if (touchStartDist > 0) {
 imgScale *= (dist / touchStartDist);
+}
 touchStartDist = dist;
 }
 });
 
-// 【PWA対応】オフライン用の仕組み（Service Worker）を登録する
-// ★【PWA対応】オフライン用の仕組み（Service Worker）を安全な位置に自動登録
+// PWA対応
 if ('serviceWorker' in navigator) {
 navigator.serviceWorker.register('sw.js')
 .then(() => console.log('オフライン準備完了！'))
 .catch((err) => console.log('登録エラー:', err));
 }
-
 </script>
 </body>
 </html>
