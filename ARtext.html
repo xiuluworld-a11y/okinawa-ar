@@ -48,7 +48,6 @@ const questData = [
 { location: "B地点（青の泉）", imageSrc: "うなぎだーまんゆー_compressed.png", question: "【第2問】鍾乳洞のなかの気温は、年間を通して約何度で一定？", options: ["約15度", "約21度", "約28度"], correctIndex: 1, hint: "素晴らしい！全問正解です！<br>洞窟を出て、お土産ショップの受付で景品をもらおう！" }
 ];
 
-// ★カメラ起動（閉じカッコを正しい位置に修正）
 // カメラ起動
 navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false })
 .then((stream) => {
@@ -68,11 +67,10 @@ let imgScale = 1.0;
 let offsetX = 0, offsetY = 0;
 let touchStartDist = 0;
 
-// AR表示用の画像オブジェクト
 const arImage = new Image();
 
-// 画像解析ループ
 // 画像解析ループ（今回の提供マーカーに合わせてチューニング）
+// 画像解析ループ
 function analyzeFrame() {
 ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -84,7 +82,6 @@ requestAnimationFrame(analyzeFrame);
 return;
 }
 
-    // 全クエスト終了時は解析をスキップ
 if (currentStage >= questData.length) {
 ctx.fillStyle = "#00FF00";
 ctx.font = "bold 20px sans-serif";
@@ -103,20 +100,19 @@ try {
 const imgData = hCtx.getImageData(0, 0, hiddenCanvas.width, hiddenCanvas.height);
 const pixels = imgData.data;
 let matchLines = 0;
-        const scanYRows =;
-        let threshold = 50;
-        
+
         // マーカーの「上の帯（y=15, 20）」と「下の帯（y=100, 105）」を通るようにスキャン位置を変更
-        const scanYRows =; 
+        // マーカーの上下の帯（y=15, 20 と y=100, 105）を通るように調整
+const scanYRows =; 
         let threshold = 60; // 暗い洞窟内を考慮し、白黒の明暗差の判定を少し広げました
+        let threshold = 60; 
 
 for (let y of scanYRows) {
 let changeCount = 0;
 let lastBrightness = -1;
-            for (let x = 30; x < hiddenCanvas.width - 30; x += 2) {
-            
+
             // スキャン範囲を端（x=10）から端（150）まで広げ、シマシマを多く拾えるように変更
-            for (let x = 10; x < hiddenCanvas.width - 10; x += 2) {
+for (let x = 10; x < hiddenCanvas.width - 10; x += 2) {
 const idx = (y * hiddenCanvas.width + x) * 4;
 const brightness = (pixels[idx] + pixels[idx+1] + pixels[idx+2]) / 3;
 if (lastBrightness !== -1) {
@@ -126,10 +122,10 @@ changeCount++;
 }
 lastBrightness = brightness;
 }
-            if (changeCount >= 10 && changeCount <= 18) {
-            
+
             // 13個のブロック（12箇所の境界）に対して、少しブレても検知できるように「6〜14回」に変更
-            if (changeCount >= 6 && changeCount <= 14) {
+            // 13個のブロック（12箇所の境界）に対して、ブレを考慮し「6〜14回」で判定
+if (changeCount >= 6 && changeCount <= 14) {
 matchLines++;
 }
 }
@@ -142,28 +138,22 @@ showQuizUI();
 }
 } catch (e) {}
 
-    // ガイド枠
-    // ガイド枠を表示
+// ガイド枠を表示
 if (!isFound) {
 ctx.strokeStyle = "rgba(0, 255, 0, 0.5)";
 ctx.lineWidth = 3;
 ctx.beginPath();
-        ctx.moveTo(canvas.width * 0.15, canvas.height * 0.28);
-        ctx.lineTo(canvas.width * 0.85, canvas.height * 0.28);
-        ctx.moveTo(canvas.width * 0.15, canvas.height * 0.72);
-        ctx.lineTo(canvas.width * 0.85, canvas.height * 0.72);
         // ガイド線の位置を、新しいスキャン位置（上下のシマシマの帯）に合わせるよう調整
-        ctx.moveTo(canvas.width * 0.05, canvas.height * 0.15);
-        ctx.lineTo(canvas.width * 0.95, canvas.height * 0.15);
-        ctx.moveTo(canvas.width * 0.05, canvas.height * 0.85);
-        ctx.lineTo(canvas.width * 0.95, canvas.height * 0.85);
+ctx.moveTo(canvas.width * 0.05, canvas.height * 0.15);
+ctx.lineTo(canvas.width * 0.95, canvas.height * 0.15);
+ctx.moveTo(canvas.width * 0.05, canvas.height * 0.85);
+ctx.lineTo(canvas.width * 0.95, canvas.height * 0.85);
 ctx.stroke();
 
 ctx.fillStyle = "#00FF00";
 ctx.font = "bold 14px sans-serif";
 ctx.textAlign = "center";
-        ctx.fillText("上下のシマシマを線に合わせてください", canvas.width / 2, canvas.height * 0.2);
-        ctx.fillText("上下のシマシマを緑の線に合わせてください", canvas.width / 2, canvas.height * 0.08);
+ctx.fillText("上下のシマシマを緑の線に合わせてください", canvas.width / 2, canvas.height * 0.08);
 }
 requestAnimationFrame(analyzeFrame);
 }
@@ -232,6 +222,7 @@ alert("すべてのクエストが終了しました！");
 }
 
 // タッチ操作
+// タッチ操作（タイポを修正しました）
 let startX = 0, startY = 0;
 window.addEventListener('touchstart', (e) => {
 if (e.touches.length === 1) {
@@ -258,12 +249,14 @@ const dist = Math.hypot(
 e.touches[0].clientX - e.touches[1].clientX,
 e.touches[0].clientY - e.touches[1].clientY
 );
-imgScale *= (dist / touchStartDist);
+        imgScale *= (dist / touchStartDist);
+        if (touchStartDist > 0) {
+            imgScale *= (dist / touchStartDist);
+        }
 touchStartDist = dist;
 }
 });
 
-// ★【PWA対応】オフライン用の仕組み
 // PWA対応
 if ('serviceWorker' in navigator) {
 navigator.serviceWorker.register('sw.js')
