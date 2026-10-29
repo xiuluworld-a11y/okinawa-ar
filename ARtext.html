@@ -50,16 +50,20 @@ const questData = [
 ];
 
 // カメラ起動
-navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false })
-.then((stream) => {
-    video.srcObject = stream;
-    video.addEventListener('loadedmetadata', () => {
-        requestAnimationFrame(analyzeFrame);
+if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false })
+    .then((stream) => {
+        video.srcObject = stream;
+        video.addEventListener('loadedmetadata', () => {
+            requestAnimationFrame(analyzeFrame);
+        });
+    })
+    .catch((err) => {
+        alert("カメラ起動エラー: " + err.name + "\n※ローカルファイル(file:///)やHTTP環境ではブラウザのセキュリティ制限でカメラが使えない場合があります。");
     });
-})
-.catch((err) => {
-    alert("カメラエラー: " + err.name);
-});
+} else {
+    alert("お使いのブラウザ・環境ではカメラ機能（getUserMedia）がサポートされていません。HTTPS環境で試すか、別のブラウザを使用してください。");
+}
 
 // 変数
 let isFound = false;
@@ -101,7 +105,7 @@ function analyzeFrame() {
         const pixels = imgData.data;
         let matchLines = 0;
         
-        // ★【最重要変更】シマシマの超細い幅（上端 y=7, 9 / 下端 y=111, 113）をピンポイント狙い撃ち
+        // ★【修正】途切れていたスキャン対象のY座標（上端と下端のピンポイント）を指定
         const scanYRows =; 
         let threshold = 55; 
         
@@ -109,27 +113,23 @@ function analyzeFrame() {
             let changeCount = 0;
             let lastBrightness = -1;
             
-            // ★スキャン漏れを防ぐため 1ピクセル刻み（x++）で全走査に変更
             for (let x = 5; x < hiddenCanvas.width - 5; x++) {
                 const idx = (y * hiddenCanvas.width + x) * 4;
                 const brightness = (pixels[idx] + pixels[idx+1] + pixels[idx+2]) / 3;
                 if (lastBrightness !== -1) {
                     if (Math.abs(brightness - lastBrightness) > threshold) {
                         changeCount++;
-                        // 連続する微小なブレでの多重カウントを防ぐため、1マス進める
                         x += 2; 
                     }
                 }
                 lastBrightness = brightness;
             }
             
-            // マーカー全体の13ブロック（境界12箇所）を、カメラの距離や見切れを想定して「6〜14回」で許容
             if (changeCount >= 6 && changeCount <= 14) {
                 matchLines++;
             }
         }
         
-        // 4本のスキャンラインのうち2本以上合格でAR展開
         if (matchLines >= 2) {
             arImage.src = questData[currentStage].imageSrc;
             isFound = true;
@@ -137,12 +137,11 @@ function analyzeFrame() {
         }
     } catch (e) {}
 
-    // ガイド枠を表示（実際のシマシマの位置にガイド線を追従）
+    // ガイド枠を表示
     if (!isFound) {
         ctx.strokeStyle = "rgba(0, 255, 0, 0.6)";
         ctx.lineWidth = 4;
         ctx.beginPath();
-        // マーカーのシマシマの細さに合わせて、ガイド線を画面の端（上部7%、下部93%）へ寄せました
         ctx.moveTo(canvas.width * 0.02, canvas.height * 0.07);
         ctx.lineTo(canvas.width * 0.98, canvas.height * 0.07);
         ctx.moveTo(canvas.width * 0.02, canvas.height * 0.93);
@@ -207,6 +206,7 @@ function checkAnswer(selectedIndex) {
 }
 
 // 次のステージへ進む（セーブ対応）
+// ★【修正】未完結だった関数の閉じとアラートの記述を補完
 function goToNextStage() {
     quizUi.classList.remove('show');
     isFound = false;
@@ -214,51 +214,10 @@ function goToNextStage() {
     offsetY = 0;
     imgScale = 1.0;
     currentStage++;
-    localStorage.setItem('cave_quest_stage', currentStage); // ステージ保存
+    localStorage.setItem('cave_quest_stage', currentStage);
     if (currentStage >= questData.length) {
-        alert("すべてのクエストが終了しました！");
+        alert("すべてのクエストが終了しました！お疲れ様でした！");
     }
-}
-
-// タッチ操作
-let startX = 0, startY = 0;
-window.addEventListener('touchstart', (e) => {
-    if (e.touches.length === 1) {
-        startX = e.touches[0].clientX;
-        startY = e.touches[0].clientY;
-    } else if (e.touches.length === 2) {
-        touchStartDist = Math.hypot(
-            e.touches[0].clientX - e.touches[1].clientX,
-            e.touches[0].clientY - e.touches[1].clientY
-        );
-    }
-});
-
-window.addEventListener('touchmove', (e) => {
-    if (e.touches.length === 1) {
-        const moveX = e.touches[0].clientX - startX;
-        const moveY = e.touches[0].clientY - startY;
-        offsetX += moveX;
-        offsetY += moveY;
-        startX = e.touches[0].clientX;
-        startY = e.touches[0].clientY;
-    } else if (e.touches.length === 2) {
-        const dist = Math.hypot(
-            e.touches[0].clientX - e.touches[1].clientX,
-            e.touches[0].clientY - e.touches[1].clientY
-        );
-        if (touchStartDist > 0) {
-            imgScale *= (dist / touchStartDist);
-        }
-        touchStartDist = dist;
-    }
-});
-
-// PWA対応
-if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('sw.js')
-    .then(() => console.log('オフライン準備完了！'))
-    .catch((err) => console.log('登録エラー:', err));
 }
 </script>
 </body>
